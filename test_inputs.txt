@@ -1,0 +1,9 @@
+{"frame_id":1,"timestamp_ms":1712620000,"intent_type":"System2Think","payload":{"internal_monologue":"Kernel stable."}}
+{"frame_id":2,"timestamp_ms":1712620001,"intent_type":"InvokeSeraph","payload":{"target_wasm_module":"echo","target_function":"print","arguments":{"message":"hello"}}}
+{ invalid json
+{"frame_id":3,"timestamp_ms":1712620002,"intent_type":"UnknownIntent","payload":{}}
+{"frame_id":4,"timestamp_ms":1712620003,"intent_type":"InvokeSeraph","payload":{"target_wasm_module":"echo","arguments":{"message":"hello"}}}
+{"frame_id":5,"timestamp_ms":1712620004,"intent_type":"InvokeSeraph","payload":{"target_wasm_module":"filesystem","target_function":"read","arguments":{"file": "etc/passwd"}}}
+{"frame_id":6,"timestamp_ms":1712620005,"intent_type":"InvokeSeraph","payload":{"target_wasm_module":"echo","target_function":"execute","arguments":{}}}
+{"frame_id":7,"timestamp_ms":1712620006,"intent_type":"BroadcastSmith","payload":{"target_agent_id":42,"binary_payload":[256]}}
+exit

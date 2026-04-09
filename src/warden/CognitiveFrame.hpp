@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -8,22 +9,23 @@
 namespace Architect::Warden {
 
 struct System2Think {
-    std::string internal_monologue;
+    std::string internal_monologue{};
 };
 
 struct QueryMerovingian {
-    std::string entity_node_id;
-    std::string relation_type;
+    std::string entity_node_id{};
+    std::string relation_type{};
 };
 
 struct InvokeSeraph {
-    std::string target_wasm_module;
-    std::unordered_map<std::string, std::string> arguments;
+    std::string target_wasm_module{};
+    std::string target_function{};
+    std::unordered_map<std::string, std::string> arguments{};
 };
 
 struct BroadcastSmith {
-    uint64_t target_agent_id;
-    std::vector<uint8_t> binary_payload;
+    std::uint64_t target_agent_id{0};
+    std::vector<std::uint8_t> binary_payload{};
 };
 
 using AgentIntent = std::variant<
@@ -34,8 +36,8 @@ using AgentIntent = std::variant<
 >;
 
 struct CognitiveFrame {
-    uint64_t frame_id;
-    uint64_t timestamp_ms;
+    std::uint64_t frame_id{0};
+    std::uint64_t timestamp_ms{0};
     AgentIntent intent;
 };
 

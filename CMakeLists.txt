@@ -15,6 +15,7 @@ add_executable(architect
     src/main.cpp 
     src/warden/WardenEngine.cpp 
     src/core/CognitiveLoop.cpp
+    src/seraph/ExecutorStub.cpp
 )
 target_include_directories(architect PRIVATE src)
 target_link_libraries(architect PRIVATE nlohmann_json::nlohmann_json)
