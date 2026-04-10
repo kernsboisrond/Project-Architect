@@ -1,11 +1,25 @@
 #include "warden/WardenEngine.hpp"
 #include "warden/CognitiveFrame.hpp"
+#include "warden/IBrainBackend.hpp"
+#include "core/AgentContext.hpp"
 #include <iostream>
+#include <memory>
+#include <string>
 
 using namespace Architect::Warden;
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+class TestBrainBackend final : public IBrainBackend {
+public:
+    std::string mock_response;
+    explicit TestBrainBackend(std::string response) : mock_response(std::move(response)) {}
+    
+    std::expected<std::string, BrainError> Generate(std::string_view, std::string_view) override {
+        return mock_response;
+    }
+};
 
 void print_frame(const CognitiveFrame& frame) {
     std::cout << "Engine Output: Frame ID [" << frame.frame_id << "] at " << frame.timestamp_ms << "ms\n";
@@ -26,9 +40,9 @@ void print_frame(const CognitiveFrame& frame) {
 }
 
 int main() {
-    Engine engine;
-    engine.CompileGrammarConstraints();
-    
+    Architect::Core::AgentContext dummy_context;
+    dummy_context.current_stimulus = "test stimulus";
+
     std::cout << "\n--- Test 1: Valid System2Think ---\n";
     std::string mock_think = R"({
         "frame_id": 1,
@@ -39,12 +53,15 @@ int main() {
         }
     })";
     
-    auto frame1 = engine.EnforceCognition(mock_think);
-    if (frame1.has_value()) {
-        print_frame(*frame1);
-    } else {
-        std::cerr << "Failed to parse System2Think\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_think));
+        auto frame1 = engine.EnforceCognition(dummy_context);
+        if (frame1.has_value()) {
+            print_frame(*frame1);
+        } else {
+            std::cerr << "Failed to parse System2Think\n";
+            return 1;
+        }
     }
     
     std::cout << "\n--- Test 2: Valid InvokeSeraph ---\n";
@@ -63,12 +80,15 @@ int main() {
         }
     })";
     
-    auto frame2 = engine.EnforceCognition(mock_invoke);
-    if (frame2.has_value()) {
-        print_frame(*frame2);
-    } else {
-        std::cerr << "Failed to parse InvokeSeraph\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_invoke));
+        auto frame2 = engine.EnforceCognition(dummy_context);
+        if (frame2.has_value()) {
+            print_frame(*frame2);
+        } else {
+            std::cerr << "Failed to parse InvokeSeraph\n";
+            return 1;
+        }
     }
     
     std::cout << "\n--- Test 3: Grammar Violation (Missing Fields) ---\n";
@@ -81,10 +101,13 @@ int main() {
         }
     })"; 
     
-    auto frame3 = engine.EnforceCognition(mock_bad_grammar);
-    if (frame3.has_value()) {
-        std::cerr << "Expected failure, but it succeeded!\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_bad_grammar));
+        auto frame3 = engine.EnforceCognition(dummy_context);
+        if (frame3.has_value()) {
+            std::cerr << "Expected failure, but it succeeded!\n";
+            return 1;
+        }
     }
 
     std::cout << "\n--- Test 4: Unauthorized Intent ---\n";
@@ -95,10 +118,13 @@ int main() {
         "payload": {}
     })"; 
     
-    auto frame4 = engine.EnforceCognition(mock_unauthorized);
-    if (frame4.has_value()) {
-        std::cerr << "Expected failure, but it succeeded!\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_unauthorized));
+        auto frame4 = engine.EnforceCognition(dummy_context);
+        if (frame4.has_value()) {
+            std::cerr << "Expected failure, but it succeeded!\n";
+            return 1;
+        }
     }
     
     std::cout << "\n--- Test 5: Valid BroadcastSmith ---\n";
@@ -111,20 +137,26 @@ int main() {
             "binary_payload": [72, 101, 108, 108, 111]
         }
     })";
-    auto frame5 = engine.EnforceCognition(mock_broadcast);
-    if (frame5.has_value()) {
-        print_frame(*frame5);
-    } else {
-        std::cerr << "Failed to parse BroadcastSmith\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_broadcast));
+        auto frame5 = engine.EnforceCognition(dummy_context);
+        if (frame5.has_value()) {
+            print_frame(*frame5);
+        } else {
+            std::cerr << "Failed to parse BroadcastSmith\n";
+            return 1;
+        }
     }
 
     std::cout << "\n--- Test 6: Malformed JSON ---\n";
     std::string mock_malformed = R"({ "incomplete": })"; 
-    auto frame6 = engine.EnforceCognition(mock_malformed);
-    if (frame6.has_value()) {
-        std::cerr << "Expected failure on malformed JSON, but it succeeded!\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_malformed));
+        auto frame6 = engine.EnforceCognition(dummy_context);
+        if (frame6.has_value()) {
+            std::cerr << "Expected failure on malformed JSON, but it succeeded!\n";
+            return 1;
+        }
     }
 
     std::cout << "\n--- Test 7: Missing target_function ---\n";
@@ -139,10 +171,13 @@ int main() {
             }
         }
     })";
-    auto frame7 = engine.EnforceCognition(mock_missing_func);
-    if (frame7.has_value()) {
-        std::cerr << "Expected failure on missing target_function, but it succeeded!\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_missing_func));
+        auto frame7 = engine.EnforceCognition(dummy_context);
+        if (frame7.has_value()) {
+            std::cerr << "Expected failure on missing target_function, but it succeeded!\n";
+            return 1;
+        }
     }
 
     std::cout << "\n--- Test 8: Invalid byte in BroadcastSmith ---\n";
@@ -155,10 +190,13 @@ int main() {
             "binary_payload": [72, 256, 108]
         }
     })";
-    auto frame8 = engine.EnforceCognition(mock_invalid_byte);
-    if (frame8.has_value()) {
-        std::cerr << "Expected failure on invalid byte, but it succeeded!\n";
-        return 1;
+    {
+        Engine engine(std::make_unique<TestBrainBackend>(mock_invalid_byte));
+        auto frame8 = engine.EnforceCognition(dummy_context);
+        if (frame8.has_value()) {
+            std::cerr << "Expected failure on invalid byte, but it succeeded!\n";
+            return 1;
+        }
     }
 
     std::cout << "\nEngine Validation tests passed.\n";
