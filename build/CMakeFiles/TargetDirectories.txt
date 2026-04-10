@@ -1,0 +1,9 @@
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/architect.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/test_cognitive_frame.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/test_warden.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/test_executor.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/RUN_TESTS.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/_deps/json-build/CMakeFiles/RUN_TESTS.dir
+C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/_deps/json-build/CMakeFiles/ALL_BUILD.dir

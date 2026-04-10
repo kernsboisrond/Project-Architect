@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/cmake_install.cmake",
+		"C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/_deps/json-build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

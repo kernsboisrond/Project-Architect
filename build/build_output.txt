@@ -1,0 +1,6 @@
+MSBuild version 17.5.1+f6fdcf537 for .NET Framework
+
+  architect.vcxproj -> C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\Debug\architect.exe
+  test_cognitive_frame.vcxproj -> C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\Debug\test_cognitive_frame.exe
+  test_executor.vcxproj -> C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\Debug\test_executor.exe
+  test_warden.vcxproj -> C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\Debug\test_warden.exe

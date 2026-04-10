@@ -1,0 +1,94 @@
+Start testing: Apr 10 03:02 Eastern Daylight Time
+----------------------------------------------------------
+1/3 Testing: test_cognitive_frame
+1/3 Test: test_cognitive_frame
+Command: "C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/Debug/test_cognitive_frame.exe"
+Directory: C:/Users/kerns/OneDrive/Desktop/Project-Architect/build
+"test_cognitive_frame" start time: Apr 10 03:02 Eastern Daylight Time
+Output:
+----------------------------------------------------------
+CognitiveFrame tests passed.
+<end of output>
+Test time =  11.05 sec
+----------------------------------------------------------
+Test Passed.
+"test_cognitive_frame" end time: Apr 10 03:03 Eastern Daylight Time
+"test_cognitive_frame" time elapsed: 00:00:11
+----------------------------------------------------------
+
+2/3 Testing: test_warden
+2/3 Test: test_warden
+Command: "C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/Debug/test_warden.exe"
+Directory: C:/Users/kerns/OneDrive/Desktop/Project-Architect/build
+"test_warden" start time: Apr 10 03:03 Eastern Daylight Time
+Output:
+----------------------------------------------------------
+Engine: Compiling strict GBNF grammar constraints for local LLM inference...
+-> Grammar loaded. Model emissions will be forcefully restricted.
+
+--- Test 1: Valid System2Think ---
+Engine Output: Frame ID [1] at 1712200000ms
+  -> Actions: System2Think | Monologue: 'Let me construct a data path...'
+
+--- Test 2: Valid InvokeSeraph ---
+Engine Output: Frame ID [3] at 1712200020ms
+  -> Actions: InvokeSeraph | Wasm: math_helper.wasm
+
+--- Test 3: Grammar Violation (Missing Fields) ---
+Engine::DeserializeSIMD - GrammarViolation: invalid QueryMerovingian payload.
+
+--- Test 4: Unauthorized Intent ---
+Engine::DeserializeSIMD - UnauthorizedIntent: unknown intent_type: ExplodeTheInternet
+
+--- Test 5: Valid BroadcastSmith ---
+Engine Output: Frame ID [4] at 1712200030ms
+  -> Actions: BroadcastSmith | Target: 99
+
+--- Test 6: Malformed JSON ---
+Engine::DeserializeSIMD - JSON parser error: [json.exception.parse_error.101] parse error at line 1, column 17: syntax error while parsing value - unexpected '}'; expected '[', '{', or a literal
+
+--- Test 7: Missing target_function ---
+Engine::DeserializeSIMD - GrammarViolation: invalid InvokeSeraph payload.
+
+--- Test 8: Invalid byte in BroadcastSmith ---
+Engine::DeserializeSIMD - GrammarViolation: binary_payload must contain bytes in range 0..255.
+
+Engine Validation tests passed.
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"test_warden" end time: Apr 10 03:03 Eastern Daylight Time
+"test_warden" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/3 Testing: test_executor
+3/3 Test: test_executor
+Command: "C:/Users/kerns/OneDrive/Desktop/Project-Architect/build/Debug/test_executor.exe"
+Directory: C:/Users/kerns/OneDrive/Desktop/Project-Architect/build
+"test_executor" start time: Apr 10 03:03 Eastern Daylight Time
+Output:
+----------------------------------------------------------
+
+--- Test 1: Unsupported Module ---
+Test 'Unsupported Module' passed.
+
+--- Test 2: Unsupported Function ---
+Test 'Unsupported Function' passed.
+
+--- Test 3: Invalid Arguments (Missing) ---
+Test 'Invalid Arguments' passed.
+
+--- Test 4: Valid Execution ---
+Test 'Valid Execution' passed.
+
+Executor Validation tests passed.
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"test_executor" end time: Apr 10 03:03 Eastern Daylight Time
+"test_executor" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Apr 10 03:03 Eastern Daylight Time

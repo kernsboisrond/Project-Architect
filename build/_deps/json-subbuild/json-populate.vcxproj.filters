@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\4df954b58e9a0814e5f581c5724f4d09\json-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\6c287c60dd5c18285b34763e17777f42\json-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\0317cd1e11d4f4fafab61a2eb141ab79\json-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-subbuild\CMakeFiles\json-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{EC05A8C8-4F3C-3E17-804B-3F4EB2404CE7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

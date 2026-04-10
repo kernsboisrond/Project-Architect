@@ -54,6 +54,7 @@ int main() {
         "intent_type": "InvokeSeraph",
         "payload": {
             "target_wasm_module": "math_helper.wasm",
+            "target_function": "execute",
             "arguments": {
                 "operation": "add",
                 "a": "5",
@@ -115,6 +116,48 @@ int main() {
         print_frame(*frame5);
     } else {
         std::cerr << "Failed to parse BroadcastSmith\n";
+        return 1;
+    }
+
+    std::cout << "\n--- Test 6: Malformed JSON ---\n";
+    std::string mock_malformed = R"({ "incomplete": })"; 
+    auto frame6 = engine.EnforceCognition(mock_malformed);
+    if (frame6.has_value()) {
+        std::cerr << "Expected failure on malformed JSON, but it succeeded!\n";
+        return 1;
+    }
+
+    std::cout << "\n--- Test 7: Missing target_function ---\n";
+    std::string mock_missing_func = R"({
+        "frame_id": 7,
+        "timestamp_ms": 1712200050,
+        "intent_type": "InvokeSeraph",
+        "payload": {
+            "target_wasm_module": "math_helper.wasm",
+            "arguments": {
+                "operation": "add"
+            }
+        }
+    })";
+    auto frame7 = engine.EnforceCognition(mock_missing_func);
+    if (frame7.has_value()) {
+        std::cerr << "Expected failure on missing target_function, but it succeeded!\n";
+        return 1;
+    }
+
+    std::cout << "\n--- Test 8: Invalid byte in BroadcastSmith ---\n";
+    std::string mock_invalid_byte = R"({
+        "frame_id": 8,
+        "timestamp_ms": 1712200060,
+        "intent_type": "BroadcastSmith",
+        "payload": {
+            "target_agent_id": 99,
+            "binary_payload": [72, 256, 108]
+        }
+    })";
+    auto frame8 = engine.EnforceCognition(mock_invalid_byte);
+    if (frame8.has_value()) {
+        std::cerr << "Expected failure on invalid byte, but it succeeded!\n";
         return 1;
     }
 

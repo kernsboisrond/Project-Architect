@@ -33,3 +33,8 @@ add_executable(test_warden tests/test_warden.cpp src/warden/WardenEngine.cpp)
 target_include_directories(test_warden PRIVATE src)
 target_link_libraries(test_warden PRIVATE nlohmann_json::nlohmann_json)
 add_test(NAME test_warden COMMAND test_warden)
+
+# Test Seraph Executor
+add_executable(test_executor tests/test_executor.cpp src/seraph/ExecutorStub.cpp)
+target_include_directories(test_executor PRIVATE src)
+add_test(NAME test_executor COMMAND test_executor)

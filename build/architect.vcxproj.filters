@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\src\warden\WardenEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\src\core\CognitiveLoop.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\src\seraph\ExecutorStub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="C:\Users\kerns\OneDrive\Desktop\Project-Architect\build\_deps\json-src\nlohmann_json.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{3AD7BFD6-2EF9-3B7C-A384-2B48AD2E1457}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
