@@ -1,8 +1,16 @@
 #pragma once
 
+#include "core/AgentContext.hpp"
+#include "seraph/ExecutorStub.hpp"
 #include "warden/CognitiveFrame.hpp"
 #include "warden/WardenEngine.hpp"
-#include "seraph/ExecutorStub.hpp"
+
+#include <string>
+
+struct DispatchOutcome {
+    bool success{true};
+    std::string error_message{};
+};
 
 class CognitiveLoop {
 private:
@@ -10,11 +18,11 @@ private:
     Architect::Seraph::ExecutorStub& executor_;
 
 public:
-    explicit CognitiveLoop(Architect::Warden::Engine& engine, Architect::Seraph::ExecutorStub& executor);
+    CognitiveLoop(Architect::Warden::Engine& engine,
+                  Architect::Seraph::ExecutorStub& executor);
 
     void run();
 
 private:
-    // Core heartbeat dispatcher mechanism
-    void DispatchIntent(const Architect::Warden::CognitiveFrame& frame) const;
+    DispatchOutcome DispatchIntent(const Architect::Warden::CognitiveFrame& frame) const;
 };

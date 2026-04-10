@@ -1,5 +1,8 @@
 #include "WardenEngine.hpp"
 
+#include "GrammarConstraints.hpp"
+#include "PromptAssembler.hpp"
+
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -7,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using json = nlohmann::json;
@@ -100,45 +104,47 @@ void Engine::CompileGrammarConstraints() {
     }
 
     std::cout << "Engine: Compiling strict GBNF grammar constraints for local LLM inference...\n";
-
-    active_gbnf_grammar_ = R"(root ::= "{" ws "\"frame_id\":" ws number "," ws "\"timestamp_ms\":" ws number "," ws "\"intent_type\":" ws intent_type "," ws "\"payload\":" ws payload "}"
-ws ::= [ \t\n\r]*
-string ::= "\"" chars "\""
-chars ::= "" | char chars
-char ::= [^"\\] | "\\" escape
-escape ::= "\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t"
-number ::= [0-9]+
-number_array ::= "[" ws (number (ws "," ws number)*)? ws "]"
-dict ::= "{" ws (string ws ":" ws string (ws "," ws string ws ":" ws string)*)? ws "}"
-
-intent_type ::= "\"System2Think\"" | "\"QueryMerovingian\"" | "\"InvokeSeraph\"" | "\"BroadcastSmith\""
-payload ::= payload_think | payload_query | payload_invoke | payload_broadcast
-
-payload_think ::= "{" ws "\"internal_monologue\":" ws string ws "}"
-payload_query ::= "{" ws "\"entity_node_id\":" ws string ws "," ws "\"relation_type\":" ws string ws "}"
-payload_invoke ::= "{" ws "\"target_wasm_module\":" ws string ws "," ws "\"target_function\":" ws string ws "," ws "\"arguments\":" ws dict ws "}"
-payload_broadcast ::= "{" ws "\"target_agent_id\":" ws number ws "," ws "\"binary_payload\":" ws number_array ws "}"
-)";
-
+    active_gbnf_grammar_ = std::string(GetCognitiveFrameGrammar());
     std::cout << "-> Grammar loaded. Model emissions will be forcefully restricted.\n";
 }
 
+Engine::Engine(std::unique_ptr<IBrainBackend> brain)
+    : brain_(std::move(brain)) {}
+
+std::string_view Engine::ActiveGrammar() const noexcept {
+    return active_gbnf_grammar_;
+}
+
 std::expected<CognitiveFrame, WardenError>
-Engine::EnforceCognition(std::string_view stimulus) {
+Engine::EnforceCognition(const Architect::Core::AgentContext& context) {
     if (active_gbnf_grammar_.empty()) {
         CompileGrammarConstraints();
     }
 
-    if (stimulus.empty()) {
-        std::cerr << "Engine::EnforceCognition - GrammarViolation: empty stimulus.\n";
+    if (!brain_) {
+        std::cerr << "Engine::EnforceCognition - InferenceFailure: no brain backend attached.\n";
+        return std::unexpected(WardenError::InferenceTimeout);
+    }
+
+    if (context.current_stimulus.empty() && !context.last_action_feedback.has_value()) {
+        std::cerr << "Engine::EnforceCognition - GrammarViolation: empty stimulus and no recovery feedback.\n";
         return std::unexpected(WardenError::GrammarViolation);
     }
 
-    // Phase 1.5 bridge:
-    // For now, stimulus is still assumed to be the already-generated JSON frame.
-    // Next step is to replace this with:
-    // prompt -> backend generation -> DeserializeSIMD(raw_model_output)
-    return DeserializeSIMD(stimulus);
+    const std::string prompt = PromptAssembler::BuildPrompt(context);
+
+    auto raw_json = brain_->Generate(prompt, ActiveGrammar());
+    if (!raw_json.has_value()) {
+        std::cerr << "Engine::EnforceCognition - InferenceFailure: backend generation failed.\n";
+        return std::unexpected(WardenError::InferenceTimeout);
+    }
+
+    if (raw_json->empty()) {
+        std::cerr << "Engine::EnforceCognition - InferenceFailure: backend returned empty output.\n";
+        return std::unexpected(WardenError::InferenceTimeout);
+    }
+
+    return DeserializeSIMD(*raw_json);
 }
 
 std::expected<CognitiveFrame, WardenError>

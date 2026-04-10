@@ -5,36 +5,95 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Fetch nlohmann/json for mock JSON validation/parsing
 include(FetchContent)
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
+include(CTest)
+
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+)
 FetchContent_MakeAvailable(json)
 
-# Main executable
-add_executable(architect 
-    src/main.cpp 
-    src/warden/WardenEngine.cpp 
-    src/core/CognitiveLoop.cpp
+# Warden
+add_library(architect_warden STATIC
+    src/warden/WardenEngine.cpp
+    src/warden/MockBrainBackend.cpp
+    src/warden/PromptAssembler.cpp
+    src/warden/GrammarConstraints.cpp
+)
+
+target_include_directories(architect_warden
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(architect_warden
+    PUBLIC
+        nlohmann_json::nlohmann_json
+)
+
+# Seraph
+add_library(architect_seraph STATIC
     src/seraph/ExecutorStub.cpp
 )
-target_include_directories(architect PRIVATE src)
-target_link_libraries(architect PRIVATE nlohmann_json::nlohmann_json)
 
-# Optional testing
-enable_testing()
+target_include_directories(architect_seraph
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
-# Test Cognitive Frame
-add_executable(test_cognitive_frame tests/test_cognitive_frame.cpp)
-target_include_directories(test_cognitive_frame PRIVATE src)
-add_test(NAME test_cognitive_frame COMMAND test_cognitive_frame)
+# Core
+add_library(architect_core STATIC
+    src/core/CognitiveLoop.cpp
+)
 
-# Test Warden Engine
-add_executable(test_warden tests/test_warden.cpp src/warden/WardenEngine.cpp)
-target_include_directories(test_warden PRIVATE src)
-target_link_libraries(test_warden PRIVATE nlohmann_json::nlohmann_json)
-add_test(NAME test_warden COMMAND test_warden)
+target_include_directories(architect_core
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
-# Test Seraph Executor
-add_executable(test_executor tests/test_executor.cpp src/seraph/ExecutorStub.cpp)
-target_include_directories(test_executor PRIVATE src)
-add_test(NAME test_executor COMMAND test_executor)
+target_link_libraries(architect_core
+    PUBLIC
+        architect_warden
+        architect_seraph
+)
+
+# Main executable
+add_executable(architect
+    src/main.cpp
+)
+
+target_link_libraries(architect
+    PRIVATE
+        architect_core
+        architect_warden
+        architect_seraph
+)
+
+if(BUILD_TESTING)
+
+    add_executable(test_cognitive_frame
+        tests/test_cognitive_frame.cpp
+    )
+    target_include_directories(test_cognitive_frame PRIVATE src)
+    add_test(NAME test_cognitive_frame COMMAND test_cognitive_frame)
+
+    add_executable(test_warden
+        tests/test_warden.cpp
+    )
+    target_link_libraries(test_warden
+        PRIVATE
+            architect_warden
+    )
+    add_test(NAME test_warden COMMAND test_warden)
+
+    add_executable(test_executor
+        tests/test_executor.cpp
+    )
+    target_link_libraries(test_executor
+        PRIVATE
+            architect_seraph
+    )
+    add_test(NAME test_executor COMMAND test_executor)
+
+endif()

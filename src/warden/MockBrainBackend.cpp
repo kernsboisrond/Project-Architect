@@ -1,31 +1,36 @@
 #include "MockBrainBackend.hpp"
 
+#include <string>
+
 namespace Architect::Warden {
 
-void MockBrainBackend::SetNextResponse(std::string response) {
-    next_response_ = std::move(response);
-}
+std::expected<std::string, BrainError>
+MockBrainBackend::Generate(std::string_view prompt, std::string_view /*grammar*/) {
+    const std::string assembled(prompt);
 
-std::expected<std::string, BrainError> MockBrainBackend::Generate(
-    std::string_view /*prompt*/,
-    std::string_view /*grammar*/) {
-    
-    // If a specific test response was injected, return it once
-    if (!next_response_.empty()) {
-        std::string res = std::move(next_response_);
-        next_response_.clear();
-        return res;
+    if (assembled.find("SERAPH REJECTION") != std::string::npos) {
+        return R"({
+            "frame_id": 102,
+            "timestamp_ms": 1712200001,
+            "intent_type": "System2Think",
+            "payload": {
+                "internal_monologue": "My requested action was denied. I must reformulate safely."
+            }
+        })";
     }
 
-    // Default valid fallback frame ensuring parsing success
     return R"({
-  "frame_id": 1,
-  "timestamp_ms": 1700000000000,
-  "intent_type": "System2Think",
-  "payload": {
-    "internal_monologue": "Mock backend functioning securely under simulated grammar."
-  }
-})";
+        "frame_id": 101,
+        "timestamp_ms": 1712200000,
+        "intent_type": "InvokeSeraph",
+        "payload": {
+            "target_wasm_module": "echo",
+            "target_function": "print",
+            "arguments": {
+                "message": "Initiating standard response."
+            }
+        }
+    })";
 }
 
 } // namespace Architect::Warden
