@@ -35,7 +35,40 @@ target_link_libraries(architect_warden
 )
 
 if(ARCHITECT_ENABLE_LLAMA)
+    # Disable unnecessary llama.cpp targets to speed up build
+    set(LLAMA_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
+    set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
+    set(LLAMA_BUILD_SERVER OFF CACHE BOOL "Disable server" FORCE)
+    
+    FetchContent_Declare(
+        llama_cpp
+        GIT_REPOSITORY https://github.com/ggml-org/llama.cpp.git
+        GIT_TAG        b6498 # using a pinned stable release for predictability
+    )
+    FetchContent_MakeAvailable(llama_cpp)
+
+    # Work around current MSVC + C++23 build issues in llama.cpp
+    if(MSVC)
+        if(TARGET llama)
+            set_property(TARGET llama PROPERTY CXX_STANDARD 17)
+            set_property(TARGET llama PROPERTY CXX_STANDARD_REQUIRED ON)
+            set_property(TARGET llama PROPERTY CXX_EXTENSIONS OFF)
+        endif()
+
+        # Some versions split pieces across ggml targets; guard if present.
+        foreach(tgt ggml ggml-base ggml-cpu ggml-metal ggml-blas)
+            if(TARGET ${tgt})
+                set_property(TARGET ${tgt} PROPERTY CXX_STANDARD 17)
+                set_property(TARGET ${tgt} PROPERTY CXX_STANDARD_REQUIRED ON)
+                set_property(TARGET ${tgt} PROPERTY CXX_EXTENSIONS OFF)
+            endif()
+        endforeach()
+    endif()
+endif()
+
+if(ARCHITECT_ENABLE_LLAMA)
     target_compile_definitions(architect_warden PUBLIC ARCHITECT_ENABLE_LLAMA=1)
+    target_link_libraries(architect_warden PUBLIC llama)
 else()
     target_compile_definitions(architect_warden PUBLIC ARCHITECT_ENABLE_LLAMA=0)
 endif()

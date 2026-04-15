@@ -15,7 +15,7 @@ int main() {
 
 #if ARCHITECT_ENABLE_LLAMA
     Architect::Warden::LlamaBackendConfig config;
-    config.model_path = ""; // Fill this later during real Gemma bring-up.
+    config.model_path = "models/gemma-4-e2b.gguf"; // Real path for Gemma bring-up
 
     if (!config.model_path.empty()) {
         brain = std::make_unique<Architect::Warden::LlamaCppBackend>(config);
