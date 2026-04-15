@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(ARCHITECT_ENABLE_LLAMA "Enable llama.cpp / Gemma backend" OFF)
 include(FetchContent)
 include(CTest)
 
@@ -20,6 +21,7 @@ add_library(architect_warden STATIC
     src/warden/MockBrainBackend.cpp
     src/warden/PromptAssembler.cpp
     src/warden/GrammarConstraints.cpp
+    src/warden/LlamaCppBackend.cpp
 )
 
 target_include_directories(architect_warden
@@ -31,6 +33,12 @@ target_link_libraries(architect_warden
     PUBLIC
         nlohmann_json::nlohmann_json
 )
+
+if(ARCHITECT_ENABLE_LLAMA)
+    target_compile_definitions(architect_warden PUBLIC ARCHITECT_ENABLE_LLAMA=1)
+else()
+    target_compile_definitions(architect_warden PUBLIC ARCHITECT_ENABLE_LLAMA=0)
+endif()
 
 # Seraph
 add_library(architect_seraph STATIC
