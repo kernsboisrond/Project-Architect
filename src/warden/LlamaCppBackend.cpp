@@ -43,6 +43,23 @@ bool LlamaCppBackend::Initialize() {
     }
     model_ = model;
 
+    if (!CreateContext()) {
+        llama_model_free(static_cast<llama_model*>(model_));
+        model_ = nullptr;
+        return false;
+    }
+
+    std::cout << "[LlamaCppBackend] Model loaded and initial context verified.\n";
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool LlamaCppBackend::CreateContext() {
+#if ARCHITECT_ENABLE_LLAMA
+    if (!model_) return false;
+
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = config_.n_ctx;
     ctx_params.n_batch = 128;
@@ -51,25 +68,27 @@ bool LlamaCppBackend::Initialize() {
     auto* ctx = llama_init_from_model(static_cast<llama_model*>(model_), ctx_params);
     if (!ctx) {
         std::cerr << "[LlamaCppBackend] Error: failed to create context.\n";
-        llama_model_free(static_cast<llama_model*>(model_));
-        model_ = nullptr;
         return false;
     }
     ctx_ = ctx;
-
-    std::cout << "[LlamaCppBackend] Model loaded and context created successfully.\n";
     return true;
 #else
     return false;
 #endif
 }
 
-void LlamaCppBackend::Shutdown() {
+void LlamaCppBackend::DestroyContext() {
 #if ARCHITECT_ENABLE_LLAMA
     if (ctx_) {
         llama_free(static_cast<llama_context*>(ctx_));
         ctx_ = nullptr;
     }
+#endif
+}
+
+void LlamaCppBackend::Shutdown() {
+#if ARCHITECT_ENABLE_LLAMA
+    DestroyContext();
     if (model_) {
         llama_model_free(static_cast<llama_model*>(model_));
         model_ = nullptr;
@@ -83,7 +102,12 @@ void LlamaCppBackend::Shutdown() {
 std::expected<std::string, BrainError>
 LlamaCppBackend::Generate(std::string_view prompt, std::string_view /*grammar*/) {
 #if ARCHITECT_ENABLE_LLAMA
-    if (!ready_ || !model_ || !ctx_) {
+    if (!ready_ || !model_) {
+        return std::unexpected(BrainError::BackendUnavailable);
+    }
+
+    DestroyContext();
+    if (!CreateContext()) {
         return std::unexpected(BrainError::BackendUnavailable);
     }
 
@@ -109,8 +133,7 @@ LlamaCppBackend::Generate(std::string_view prompt, std::string_view /*grammar*/)
         return std::unexpected(BrainError::GenerationFailed);
     }
 
-    // 3. Clear KV cache (API not available in this pinned version, relies on backend restart if needed)
-    // llama_kv_cache_clear(ctx);
+    // 3. Per-request context recreation provides isolation for this pinned version.
 
     // 4. Create a sampler chain
     auto sampler_params = llama_sampler_chain_default_params();

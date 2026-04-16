@@ -36,6 +36,9 @@ private:
 
     bool Initialize();
     void Shutdown();
+
+    bool CreateContext();
+    void DestroyContext();
 };
 
 } // namespace Architect::Warden
