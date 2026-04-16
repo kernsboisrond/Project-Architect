@@ -144,6 +144,8 @@ Engine::EnforceCognition(const Architect::Core::AgentContext& context) {
         return std::unexpected(WardenError::InferenceTimeout);
     }
 
+    std::cout << "[Warden] Raw backend output:\n" << *raw_json << "\n";
+
     return DeserializeSIMD(*raw_json);
 }
 

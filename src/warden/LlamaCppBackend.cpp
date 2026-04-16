@@ -6,6 +6,7 @@
 
 #include <utility>
 #include <iostream>
+#include <vector>
 
 namespace Architect::Warden {
 
@@ -44,6 +45,8 @@ bool LlamaCppBackend::Initialize() {
 
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = config_.n_ctx;
+    ctx_params.n_batch = 128;
+    ctx_params.n_ubatch = 128;
 
     auto* ctx = llama_init_from_model(static_cast<llama_model*>(model_), ctx_params);
     if (!ctx) {
@@ -78,13 +81,81 @@ void LlamaCppBackend::Shutdown() {
 }
 
 std::expected<std::string, BrainError>
-LlamaCppBackend::Generate(std::string_view /*prompt*/, std::string_view /*grammar*/) {
+LlamaCppBackend::Generate(std::string_view prompt, std::string_view /*grammar*/) {
 #if ARCHITECT_ENABLE_LLAMA
-    if (!ready_) {
+    if (!ready_ || !model_ || !ctx_) {
         return std::unexpected(BrainError::BackendUnavailable);
     }
 
-    return std::unexpected(BrainError::GenerationFailed);
+    auto* model = static_cast<llama_model*>(model_);
+    auto* ctx = static_cast<llama_context*>(ctx_);
+
+    // 1. Get vocab
+    const auto* vocab = llama_model_get_vocab(model);
+
+    // 2. Tokenize prompt
+    const bool add_special = true;
+    const bool parse_special = true;
+
+    // First pass to get size
+    int n_tokens = llama_tokenize(vocab, prompt.data(), prompt.length(), nullptr, 0, add_special, parse_special);
+    if (n_tokens < 0) {
+        n_tokens = -n_tokens;
+    }
+
+    std::vector<llama_token> prompt_tokens(n_tokens);
+    int ret = llama_tokenize(vocab, prompt.data(), prompt.length(), prompt_tokens.data(), prompt_tokens.size(), add_special, parse_special);
+    if (ret < 0) {
+        return std::unexpected(BrainError::GenerationFailed);
+    }
+
+    // 3. Clear KV cache (API not available in this pinned version, relies on backend restart if needed)
+    // llama_kv_cache_clear(ctx);
+
+    // 4. Create a sampler chain
+    auto sampler_params = llama_sampler_chain_default_params();
+    llama_sampler* smpl = llama_sampler_chain_init(sampler_params);
+    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
+
+    // 5. Evaluate the prompt
+    if (llama_decode(ctx, llama_batch_get_one(prompt_tokens.data(), prompt_tokens.size()))) {
+        llama_sampler_free(smpl);
+        return std::unexpected(BrainError::GenerationFailed);
+    }
+
+    // 6. Generation loop
+    std::string result;
+    int n_predict = config_.n_predict;
+    
+    for (int i = 0; i < n_predict; ++i) {
+        // Sample next token
+        llama_token new_token_id = llama_sampler_sample(smpl, ctx, -1);
+        
+        // Stop on EOG
+        if (llama_token_is_eog(vocab, new_token_id)) {
+            break;
+        }
+
+        // Convert token to text
+        char buf[128];
+        int n_chars = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, parse_special);
+        if (n_chars < 0) {
+            llama_sampler_free(smpl);
+            return std::unexpected(BrainError::GenerationFailed);
+        }
+        result.append(buf, n_chars);
+
+        // Feed sampled token back for next evaluation
+        if (llama_decode(ctx, llama_batch_get_one(&new_token_id, 1))) {
+            llama_sampler_free(smpl);
+            return std::unexpected(BrainError::GenerationFailed);
+        }
+    }
+
+    // 7. Free sampler
+    llama_sampler_free(smpl);
+
+    return result;
 #else
     return std::unexpected(BrainError::BackendUnavailable);
 #endif

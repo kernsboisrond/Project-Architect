@@ -5,6 +5,7 @@
 #include "warden/MockBrainBackend.hpp"
 #include "warden/WardenEngine.hpp"
 
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 
@@ -15,11 +16,21 @@ int main() {
 
 #if ARCHITECT_ENABLE_LLAMA
     Architect::Warden::LlamaBackendConfig config;
-    config.model_path = "models/gemma-4-e2b.gguf"; // Real path for Gemma bring-up
+    
+    if (const char* env_path = std::getenv("ARCHITECT_MODEL_PATH")) {
+        config.model_path = env_path;
+    } else {
+        config.model_path = "models/gemma-4-e2b.gguf"; // Default test path
+    }
 
     if (!config.model_path.empty()) {
         brain = std::make_unique<Architect::Warden::LlamaCppBackend>(config);
         std::cout << "[Boot] LlamaCppBackend selected.\n";
+
+        if (auto* llama = dynamic_cast<Architect::Warden::LlamaCppBackend*>(brain.get()); llama && !llama->IsReady()) {
+            std::cout << "[Boot] LlamaCppBackend failed to initialize. Falling back to MockBrainBackend.\n";
+            brain = std::make_unique<Architect::Warden::MockBrainBackend>();
+        }
     } else {
         brain = std::make_unique<Architect::Warden::MockBrainBackend>();
         std::cout << "[Boot] MockBrainBackend selected (no model path configured).\n";

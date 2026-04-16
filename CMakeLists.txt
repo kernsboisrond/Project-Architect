@@ -137,4 +137,16 @@ if(BUILD_TESTING)
     )
     add_test(NAME test_executor COMMAND test_executor)
 
+    if(ARCHITECT_ENABLE_LLAMA)
+        add_executable(test_llama_backend_smoke
+            tests/test_llama_backend_smoke.cpp
+        )
+        target_link_libraries(test_llama_backend_smoke
+            PRIVATE
+                architect_warden
+        )
+        add_test(NAME test_llama_backend_smoke COMMAND test_llama_backend_smoke)
+        set_tests_properties(test_llama_backend_smoke PROPERTIES TIMEOUT 120)
+    endif()
+
 endif()
