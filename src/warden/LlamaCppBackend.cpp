@@ -62,8 +62,25 @@ bool LlamaCppBackend::CreateContext() {
 
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = config_.n_ctx;
-    ctx_params.n_batch = 512;
-    ctx_params.n_ubatch = 256;
+    
+    int batch = config_.n_batch > 0 ? config_.n_batch : 512;
+    int ubatch = config_.n_ubatch > 0 ? config_.n_ubatch : 256;
+
+    if (ubatch > batch) {
+        ubatch = batch;
+    }
+
+    ctx_params.n_batch = batch;
+    ctx_params.n_ubatch = ubatch;
+
+    if (config_.verbose) {
+        std::cout << "[LlamaCppBackend] Context settings: "
+                  << "n_ctx=" << ctx_params.n_ctx
+                  << ", n_batch=" << ctx_params.n_batch
+                  << ", n_ubatch=" << ctx_params.n_ubatch
+                  << ", n_gpu_layers=" << config_.n_gpu_layers
+                  << "\n";
+    }
 
     auto* ctx = llama_init_from_model(static_cast<llama_model*>(model_), ctx_params);
     if (!ctx) {
@@ -162,7 +179,7 @@ LlamaCppBackend::Generate(std::string_view prompt, std::string_view grammar) {
     llama_sampler_chain_add(smpl, greedy);
 
     // 5. Evaluate the prompt in chunks
-    const int batch_size = 512;
+    const int batch_size = config_.n_batch > 0 ? config_.n_batch : 512;
     int offset = 0;
 
     while (offset < static_cast<int>(prompt_tokens.size())) {

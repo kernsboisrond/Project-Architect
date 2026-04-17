@@ -3,6 +3,7 @@
 #include "GrammarConstraints.hpp"
 #include "PromptAssembler.hpp"
 
+#include <cstdlib>
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -17,6 +18,16 @@ using json = nlohmann::json;
 
 namespace Architect::Warden {
 namespace {
+
+bool DebugRawOutputEnabled() {
+    static const bool enabled = [] {
+        if (const char* v = std::getenv("ARCHITECT_DEBUG_RAW_OUTPUT")) {
+            return std::string_view(v) == "1";
+        }
+        return false;
+    }();
+    return enabled;
+}
 
 bool HasOnlyKeys(
     const json& object,
@@ -144,7 +155,9 @@ Engine::EnforceCognition(const Architect::Core::AgentContext& context) {
         return std::unexpected(WardenError::InferenceTimeout);
     }
 
-    std::cout << "[Warden] Raw backend output:\n" << *raw_json << "\n";
+    if (DebugRawOutputEnabled()) {
+        std::cout << "[Warden] Raw backend output:\n" << *raw_json << "\n";
+    }
 
     return DeserializeSIMD(*raw_json);
 }

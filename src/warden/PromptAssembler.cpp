@@ -28,13 +28,17 @@ std::string PromptAssembler::BuildPrompt(const Architect::Core::AgentContext& co
     out << "- Never invent wrapper keys like cognitive_frame.\n";
     out << "- Prefer the shortest valid payload.\n";
     out << "- Avoid BroadcastSmith unless explicit binary agent communication is requested.\n";
-    out << "- If the user asks to print or say text and echo::print is available, prefer InvokeSeraph.\n";
-    out << "- If only private reasoning is needed, prefer System2Think.\n";
+    out << "- If the user asks to print, say, or output text, YOU MUST use InvokeSeraph.\n";
+    out << "- If echo::print is available, use it for output. The argument key MUST be \"message\".\n";
+    out << "- For echo::print, set \"target_wasm_module\" to \"echo\" and \"target_function\" to \"print\".\n";
+    out << "- Avoid System2Think when an explicit executable action is requested.\n";
+    out << "- If only private reasoning is needed (no output requested), prefer System2Think.\n";
     out << "- If the request is a relation/entity lookup, prefer QueryMerovingian.\n\n";
 
     out << "Minimal valid examples:\n";
     out << "{\"frame_id\":1,\"timestamp_ms\":0,\"intent_type\":\"System2Think\",\"payload\":{\"internal_monologue\":\"I should think before acting.\"}}\n";
     out << "{\"frame_id\":2,\"timestamp_ms\":0,\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"Hello\"}}}\n";
+    out << "{\"frame_id\":4,\"timestamp_ms\":0,\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"say hello safely\"}}}\n";
     out << "{\"frame_id\":3,\"timestamp_ms\":0,\"intent_type\":\"QueryMerovingian\",\"payload\":{\"entity_node_id\":\"hello\",\"relation_type\":\"greeting\"}}\n\n";
 
     out << "Available capabilities:\n";

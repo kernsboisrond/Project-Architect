@@ -11,7 +11,9 @@ namespace Architect::Warden {
 struct LlamaBackendConfig {
     std::string model_path{};
     int n_ctx{1024};
-    int n_predict{512};
+    int n_predict{128};
+    int n_batch{512};
+    int n_ubatch{256};
     int n_gpu_layers{0};
     bool verbose{false};
 };

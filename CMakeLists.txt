@@ -156,6 +156,17 @@ if(BUILD_TESTING)
         )
         add_test(NAME test_llama_backend_smoke COMMAND test_llama_backend_smoke)
         set_tests_properties(test_llama_backend_smoke PROPERTIES TIMEOUT 120)
+
+        add_executable(test_real_backend_intents
+            tests/test_real_backend_intents.cpp
+        )
+        target_link_libraries(test_real_backend_intents
+            PRIVATE
+                architect_warden
+                architect_core
+        )
+        add_test(NAME test_real_backend_intents COMMAND test_real_backend_intents)
+        set_tests_properties(test_real_backend_intents PROPERTIES TIMEOUT 120)
     endif()
 
 endif()
