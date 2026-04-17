@@ -8,13 +8,34 @@ std::string PromptAssembler::BuildPrompt(const Architect::Core::AgentContext& co
     std::ostringstream out;
 
     out << "You are the ARCHITECT cognition source.\n";
-    out << "Return exactly one JSON object matching the CognitiveFrame contract.\n\n";
+    out << "Return exactly one JSON object matching the CognitiveFrame contract.\n";
+    out << "Do not output markdown, prose, or wrapper objects.\n\n";
 
-    out << "Allowed intent types:\n";
-    out << "- System2Think\n";
-    out << "- QueryMerovingian\n";
-    out << "- InvokeSeraph\n";
-    out << "- BroadcastSmith\n\n";
+    out << "Legal root keys exactly:\n";
+    out << "- frame_id\n";
+    out << "- timestamp_ms\n";
+    out << "- intent_type\n";
+    out << "- payload\n\n";
+
+    out << "Legal intent and payload pairings:\n";
+    out << "- System2Think => payload must be {\"internal_monologue\":\"...\"}\n";
+    out << "- QueryMerovingian => payload must be {\"entity_node_id\":\"...\",\"relation_type\":\"...\"}\n";
+    out << "- InvokeSeraph => payload must be {\"target_wasm_module\":\"...\",\"target_function\":\"...\",\"arguments\":{\"key\":\"value\"}}\n";
+    out << "- BroadcastSmith => payload must be {\"target_agent_id\":1,\"binary_payload\":[1,2,3]}\n\n";
+
+    out << "Critical rules:\n";
+    out << "- Never mix payload fields from different intents.\n";
+    out << "- Never invent wrapper keys like cognitive_frame.\n";
+    out << "- Prefer the shortest valid payload.\n";
+    out << "- Avoid BroadcastSmith unless explicit binary agent communication is requested.\n";
+    out << "- If the user asks to print or say text and echo::print is available, prefer InvokeSeraph.\n";
+    out << "- If only private reasoning is needed, prefer System2Think.\n";
+    out << "- If the request is a relation/entity lookup, prefer QueryMerovingian.\n\n";
+
+    out << "Minimal valid examples:\n";
+    out << "{\"frame_id\":1,\"timestamp_ms\":0,\"intent_type\":\"System2Think\",\"payload\":{\"internal_monologue\":\"I should think before acting.\"}}\n";
+    out << "{\"frame_id\":2,\"timestamp_ms\":0,\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"Hello\"}}}\n";
+    out << "{\"frame_id\":3,\"timestamp_ms\":0,\"intent_type\":\"QueryMerovingian\",\"payload\":{\"entity_node_id\":\"hello\",\"relation_type\":\"greeting\"}}\n\n";
 
     out << "Available capabilities:\n";
     if (context.available_capabilities.empty()) {
@@ -44,7 +65,7 @@ std::string PromptAssembler::BuildPrompt(const Architect::Core::AgentContext& co
     out << "\nCurrent stimulus:\n";
     out << context.current_stimulus << "\n\n";
 
-    out << "Return only valid JSON.\n";
+    out << "Return only one valid CognitiveFrame JSON object.\n";
     return out.str();
 }
 

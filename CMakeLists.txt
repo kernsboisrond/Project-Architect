@@ -128,6 +128,15 @@ if(BUILD_TESTING)
     )
     add_test(NAME test_warden COMMAND test_warden)
 
+    add_executable(test_prompt_assembler
+        tests/test_prompt_assembler.cpp
+    )
+    target_link_libraries(test_prompt_assembler
+        PRIVATE
+            architect_warden
+    )
+    add_test(NAME test_prompt_assembler COMMAND test_prompt_assembler)
+
     add_executable(test_executor
         tests/test_executor.cpp
     )

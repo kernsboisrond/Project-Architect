@@ -22,6 +22,7 @@ int main() {
     } else {
         config.model_path = "models/gemma-4-e2b.gguf"; // Default test path
     }
+    config.n_predict = 128;
 
     if (!config.model_path.empty()) {
         brain = std::make_unique<Architect::Warden::LlamaCppBackend>(config);

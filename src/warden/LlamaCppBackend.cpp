@@ -62,8 +62,8 @@ bool LlamaCppBackend::CreateContext() {
 
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = config_.n_ctx;
-    ctx_params.n_batch = 128;
-    ctx_params.n_ubatch = 128;
+    ctx_params.n_batch = 512;
+    ctx_params.n_ubatch = 256;
 
     auto* ctx = llama_init_from_model(static_cast<llama_model*>(model_), ctx_params);
     if (!ctx) {
@@ -100,7 +100,7 @@ void LlamaCppBackend::Shutdown() {
 }
 
 std::expected<std::string, BrainError>
-LlamaCppBackend::Generate(std::string_view prompt, std::string_view /*grammar*/) {
+LlamaCppBackend::Generate(std::string_view prompt, std::string_view grammar) {
 #if ARCHITECT_ENABLE_LLAMA
     if (!ready_ || !model_) {
         return std::unexpected(BrainError::BackendUnavailable);
@@ -138,12 +138,43 @@ LlamaCppBackend::Generate(std::string_view prompt, std::string_view /*grammar*/)
     // 4. Create a sampler chain
     auto sampler_params = llama_sampler_chain_default_params();
     llama_sampler* smpl = llama_sampler_chain_init(sampler_params);
-    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
+    if (!smpl) {
+        return std::unexpected(BrainError::GenerationFailed);
+    }
 
-    // 5. Evaluate the prompt
-    if (llama_decode(ctx, llama_batch_get_one(prompt_tokens.data(), prompt_tokens.size()))) {
+    std::string grammar_storage;
+    if (!grammar.empty()) {
+        grammar_storage.assign(grammar.begin(), grammar.end());
+
+        auto* grammar_sampler = llama_sampler_init_grammar(vocab, grammar_storage.c_str(), "root");
+        if (!grammar_sampler) {
+            llama_sampler_free(smpl);
+            return std::unexpected(BrainError::GenerationFailed);
+        }
+        llama_sampler_chain_add(smpl, grammar_sampler);
+    }
+
+    auto* greedy = llama_sampler_init_greedy();
+    if (!greedy) {
         llama_sampler_free(smpl);
         return std::unexpected(BrainError::GenerationFailed);
+    }
+    llama_sampler_chain_add(smpl, greedy);
+
+    // 5. Evaluate the prompt in chunks
+    const int batch_size = 512;
+    int offset = 0;
+
+    while (offset < static_cast<int>(prompt_tokens.size())) {
+        const int count = std::min(batch_size,
+                                   static_cast<int>(prompt_tokens.size()) - offset);
+
+        if (llama_decode(ctx, llama_batch_get_one(prompt_tokens.data() + offset, count))) {
+            llama_sampler_free(smpl);
+            return std::unexpected(BrainError::GenerationFailed);
+        }
+
+        offset += count;
     }
 
     // 6. Generation loop

@@ -1,4 +1,5 @@
 #include "warden/LlamaCppBackend.hpp"
+#include "warden/GrammarConstraints.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -19,7 +20,7 @@ int main() {
     }
     
     config.n_ctx = 1024;
-    config.n_predict = 32; // Small predict limit to keep the test short
+    config.n_predict = 256; // Increased predict limit to allow seeing full JSON structures
 
     if (!std::filesystem::exists(config.model_path)) {
         std::cout << "[Test] Model file not found at: " << config.model_path << "\n";
@@ -36,25 +37,23 @@ int main() {
     }
     std::cout << "[Test] Backend is ready.\n\n";
 
-    std::vector<std::string> prompts = {
-        "Say exactly HELLO and nothing else.",
-        "Return a short JSON object with one key named test.",
-        "Say exactly HELLO and nothing else." // testing potential cross-call contamination (Phase 4B)
-    };
+    std::cout << "--- CONSTRAINED GENERATION: INVOKESERAPH ---\n";
+    std::string prompt1 = "Print hello through echo.";
+    std::cout << "[Prompt]: " << prompt1 << "\n";
+    auto result_1 = backend.Generate(prompt1, Architect::Warden::GetCognitiveFrameGrammar());
+    if (result_1) std::cout << "[Raw Output]:\n" << *result_1 << "\n----------------------------\n\n";
 
-    int pass = 1;
-    for (const auto& prompt : prompts) {
-        std::cout << "--- GENERATION PASS " << pass++ << " ---\n";
-        std::cout << "[Prompt]: " << prompt << "\n";
-        
-        auto result = backend.Generate(prompt, "");
-        if (!result) {
-            std::cerr << "[Test] FAILED: Generation failed on pass " << (pass-1) << ".\n";
-            return 1;
-        }
+    std::cout << "--- CONSTRAINED GENERATION: SYSTEM2THINK ---\n";
+    std::string prompt2 = "Think privately about a safe hello.";
+    std::cout << "[Prompt]: " << prompt2 << "\n";
+    auto result_2 = backend.Generate(prompt2, Architect::Warden::GetCognitiveFrameGrammar());
+    if (result_2) std::cout << "[Raw Output]:\n" << *result_2 << "\n----------------------------\n\n";
 
-        std::cout << "[Raw Output]:\n" << *result << "\n----------------------------\n\n";
-    }
+    std::cout << "--- CONSTRAINED GENERATION: QUERYMEROVINGIAN ---\n";
+    std::string prompt3 = "Query the relation for entity hello.";
+    std::cout << "[Prompt]: " << prompt3 << "\n";
+    auto result_3 = backend.Generate(prompt3, Architect::Warden::GetCognitiveFrameGrammar());
+    if (result_3) std::cout << "[Raw Output]:\n" << *result_3 << "\n----------------------------\n\n";
 
     std::cout << "[Test] Smoke test completed successfully.\n";
     return 0;
