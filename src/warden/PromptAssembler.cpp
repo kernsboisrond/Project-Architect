@@ -12,10 +12,9 @@ std::string PromptAssembler::BuildPrompt(const Architect::Core::AgentContext& co
     out << "Do not output markdown, prose, or wrapper objects.\n\n";
 
     out << "Legal root keys exactly:\n";
-    out << "- frame_id\n";
-    out << "- timestamp_ms\n";
     out << "- intent_type\n";
-    out << "- payload\n\n";
+    out << "- payload\n";
+    out << "(The kernel assigns frame_id and timestamp_ms. Return ONLY intent_type and payload.)\n\n";
 
     out << "Legal intent and payload pairings:\n";
     out << "- System2Think => payload must be {\"internal_monologue\":\"...\"}\n";
@@ -36,10 +35,10 @@ std::string PromptAssembler::BuildPrompt(const Architect::Core::AgentContext& co
     out << "- If the request is a relation/entity lookup, prefer QueryMerovingian.\n\n";
 
     out << "Minimal valid examples:\n";
-    out << "{\"frame_id\":1,\"timestamp_ms\":0,\"intent_type\":\"System2Think\",\"payload\":{\"internal_monologue\":\"I should think before acting.\"}}\n";
-    out << "{\"frame_id\":2,\"timestamp_ms\":0,\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"Hello\"}}}\n";
-    out << "{\"frame_id\":4,\"timestamp_ms\":0,\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"say hello safely\"}}}\n";
-    out << "{\"frame_id\":3,\"timestamp_ms\":0,\"intent_type\":\"QueryMerovingian\",\"payload\":{\"entity_node_id\":\"hello\",\"relation_type\":\"greeting\"}}\n\n";
+    out << "{\"intent_type\":\"System2Think\",\"payload\":{\"internal_monologue\":\"I should think before acting.\"}}\n";
+    out << "{\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"Hello\"}}}\n";
+    out << "{\"intent_type\":\"InvokeSeraph\",\"payload\":{\"target_wasm_module\":\"echo\",\"target_function\":\"print\",\"arguments\":{\"message\":\"say hello safely\"}}}\n";
+    out << "{\"intent_type\":\"QueryMerovingian\",\"payload\":{\"entity_node_id\":\"hello\",\"relation_type\":\"greeting\"}}\n\n";
 
     out << "Available capabilities:\n";
     if (context.available_capabilities.empty()) {

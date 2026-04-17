@@ -3,7 +3,7 @@
 namespace Architect::Warden {
 
 std::string_view GetCognitiveFrameGrammar() {
-    static constexpr std::string_view grammar = R"(root ::= "{" ws "\"frame_id\":" ws number "," ws "\"timestamp_ms\":" ws number "," ws "\"intent_type\":" ws intent-type "," ws "\"payload\":" ws payload "}"
+    static constexpr std::string_view grammar = R"(root ::= "{" ws "\"intent_type\":" ws intent-type "," ws "\"payload\":" ws payload "}"
 ws ::= [ \t\n\r]*
 string ::= "\"" chars "\""
 chars ::= "" | char chars
