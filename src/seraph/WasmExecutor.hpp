@@ -1,6 +1,8 @@
 #pragma once
 
 #include "IExecutor.hpp"
+#include "ModuleRegistry.hpp"
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -13,7 +15,7 @@ namespace Architect::Seraph {
 
 class WasmExecutor final : public IExecutor {
 public:
-    explicit WasmExecutor(std::string base_module_dir);
+    explicit WasmExecutor(std::shared_ptr<ModuleRegistry> registry);
     ~WasmExecutor() override;
 
     // Disable copy/move to strictly manage the raw FFI pointers
@@ -29,7 +31,7 @@ private:
     bool PreFlightCheck(const InvocationRequest& request) const;
 
 private:
-    std::string base_module_dir_;
+    std::shared_ptr<ModuleRegistry> registry_;
     wasm_engine_t* engine_{nullptr};
     mutable std::unordered_map<std::string, wasmtime_module_t*> cached_modules_;
 };

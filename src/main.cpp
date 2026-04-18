@@ -2,6 +2,7 @@
 #include "seraph/ExecutorStub.hpp"
 #include "seraph/IAuditSink.hpp"
 #include "seraph/WasmExecutor.hpp"
+#include "seraph/ModuleRegistry.hpp"
 #include "seraph/InvocationTypes.hpp"
 #include "warden/IBrainBackend.hpp"
 #include "warden/LlamaCppBackend.hpp"
@@ -97,11 +98,18 @@ int main() {
     std::unique_ptr<Architect::Seraph::IExecutor> executor;
     const char* executor_env = std::getenv("ARCHITECT_EXECUTOR");
     if (executor_env && std::string(executor_env) == "wasm") {
-        std::string module_dir = ReadEnvString("ARCHITECT_WASM_MODULE_DIR", "./modules");
-        std::cout << "[Boot] Attempting to mount WasmExecutor under " << module_dir << "\n";
+        std::string manifest_path = ReadEnvString("ARCHITECT_WASM_MANIFEST", "./tests/fixtures/manifest.json");
+        std::cout << "[Boot] Attempting to mount WasmExecutor using manifest " << manifest_path << "\n";
         try {
-            executor = std::make_unique<Architect::Seraph::WasmExecutor>(module_dir);
-            std::cout << "[Boot] WasmExecutor online.\n";
+            auto registry = std::make_shared<Architect::Seraph::ModuleRegistry>();
+            auto load_res = registry->LoadManifest(manifest_path);
+            if (!load_res.has_value()) {
+                 std::cerr << "[Boot] Failed to load Wasm Registry manifest. Falling back to ExecutorStub.\n";
+                 executor = std::make_unique<Architect::Seraph::ExecutorStub>();
+            } else {
+                 executor = std::make_unique<Architect::Seraph::WasmExecutor>(registry);
+                 std::cout << "[Boot] WasmExecutor online.\n";
+            }
         } catch (...) {
             std::cout << "[Boot] WasmExecutor failed mapping. Falling back to ExecutorStub.\n";
             executor = std::make_unique<Architect::Seraph::ExecutorStub>();

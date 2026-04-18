@@ -1,8 +1,10 @@
 #include "seraph/WasmExecutor.hpp"
+#include "seraph/ModuleRegistry.hpp"
 #include "seraph/IAuditSink.hpp"
 #include "seraph/ExecutionDiagnostics.hpp"
 
 #include <iostream>
+#include <memory>
 
 using namespace Architect::Seraph;
 
@@ -14,7 +16,12 @@ public:
 };
 
 int main() {
-    WasmExecutor executor("tests/fixtures");
+    auto registry = std::make_shared<ModuleRegistry>();
+    if (!registry->LoadManifest("tests/fixtures/manifest.json").has_value()) {
+        std::cerr << "Failed to construct test registry from fixtures.\n";
+        return 1;
+    }
+    WasmExecutor executor(registry);
     MockAudit audit;
 
     InvocationRequest req;
@@ -50,7 +57,7 @@ int main() {
         return 1;
     }
 
-    if (bad_result.error() != ExecutionError::InvalidModule) {
+    if (bad_result.error() != ExecutionError::CapabilityDenied) {
         std::cerr << "WasmExecutor traversal failed but yielded wrong semantic error.\n";
         return 1;
     }

@@ -42,6 +42,12 @@ std::string GetSemanticFeedback(ExecutionError error) {
     if (error == ExecutionError::FunctionCallError) {
         return "Execution Failed: Binding call to the internal Wasm function mismatched signatures natively.";
     }
+    if (error == ExecutionError::ChecksumMismatch) {
+        return "Execution Failed: WebAssembly module bytes structurally mismatch the explicit SHA256 checksum defined in the registry. Module execution blocked due to potential tampering.";
+    }
+    if (error == ExecutionError::UntrustedModule) {
+        return "Execution Failed: WebAssembly module is identified but explicitly mapped as untrusted within the authoritative registry constraints.";
+    }
 
     return "Execution Denied: An unknown runtime error occurred during invocation.";
 }

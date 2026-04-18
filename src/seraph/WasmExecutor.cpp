@@ -11,8 +11,8 @@
 
 namespace Architect::Seraph {
 
-WasmExecutor::WasmExecutor(std::string base_module_dir)
-    : base_module_dir_(std::move(base_module_dir)) {
+WasmExecutor::WasmExecutor(std::shared_ptr<ModuleRegistry> registry)
+    : registry_(std::move(registry)) {
     wasm_config_t* config = wasm_config_new();
     engine_ = wasm_engine_new_with_config(config);
 }
@@ -33,7 +33,12 @@ bool WasmExecutor::PreFlightCheck(const InvocationRequest& request) const {
         return false;
     }
 
-    const auto& exports = request.capabilities.allowed_exports;
+    const RegisteredModule* profile = registry_->GetModuleProfile(request.module_name);
+    if (!profile) {
+        return false;
+    }
+
+    const auto& exports = profile->capabilities.allowed_exports;
     auto it = exports.find(request.module_name);
     if (it == exports.end()) {
         return false;
@@ -67,24 +72,51 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
         return std::unexpected(ExecutionError::InvalidModule);
     }
     
+    const RegisteredModule* const profile = registry_->GetModuleProfile(request.module_name);
+    if (!profile) {
+        audit.LogExecutionFailure(request, ExecutionError::UnsupportedModule); // Covered by PreFlight normally
+        return std::unexpected(ExecutionError::UnsupportedModule);
+    }
+    
+    if (!profile->trusted) {
+        audit.LogExecutionFailure(request, ExecutionError::UntrustedModule);
+        return std::unexpected(ExecutionError::UntrustedModule);
+    }
+    
     wasmtime_module_t* module = nullptr;
     
     // Phase 10C: Check Cache
     if (auto it = cached_modules_.find(request.module_name); it != cached_modules_.end()) {
         module = it->second;
     } else {
-        std::string wat_path = base_module_dir_ + "/" + request.module_name + ".wat";
-        std::string wasm_path = base_module_dir_ + "/" + request.module_name + ".wasm";
-
+        std::string wasm_path = profile->file_path.string();
         wasm_byte_vec_t wasm;
         wasm_byte_vec_new_empty(&wasm);
 
-        std::ifstream wat_file(wat_path, std::ios::binary);
-        if (wat_file.is_open()) {
-            std::stringstream buffer;
-            buffer << wat_file.rdbuf();
-            std::string wat_content = buffer.str();
+        bool is_wat = (profile->file_path.extension() == ".wat");
 
+        std::ifstream file(wasm_path, std::ios::binary);
+        if (!file.is_open()) {
+            audit.LogExecutionFailure(request, ExecutionError::FileNotFound);
+            return std::unexpected(ExecutionError::FileNotFound);
+        }
+
+        file.seekg(0, std::ios::end);
+        size_t size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        
+        std::vector<uint8_t> raw_bytes(size);
+        file.read(reinterpret_cast<char*>(raw_bytes.data()), size);
+
+        // Phase 11B: Checksum Cryptographic Verification
+        std::string computed_hash = ModuleRegistry::ComputeSha256(raw_bytes);
+        if (computed_hash != profile->sha256) {
+            audit.LogExecutionFailure(request, ExecutionError::ChecksumMismatch);
+            return std::unexpected(ExecutionError::ChecksumMismatch);
+        }
+
+        if (is_wat) {
+            std::string wat_content(raw_bytes.begin(), raw_bytes.end());
             wasmtime_error_t* err = wasmtime_wat2wasm(wat_content.data(), wat_content.size(), &wasm);
             if (err) {
                 wasmtime_error_delete(err);
@@ -92,18 +124,8 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
                 return std::unexpected(ExecutionError::WasmCompileError);
             }
         } else {
-            std::ifstream wasm_file(wasm_path, std::ios::binary);
-            if (!wasm_file.is_open()) {
-                audit.LogExecutionFailure(request, ExecutionError::FileNotFound);
-                return std::unexpected(ExecutionError::FileNotFound);
-            }
-            
-            wasm_file.seekg(0, std::ios::end);
-            size_t size = wasm_file.tellg();
-            wasm_file.seekg(0, std::ios::beg);
-            
             wasm_byte_vec_new_uninitialized(&wasm, size);
-            wasm_file.read(reinterpret_cast<char*>(wasm.data), size);
+            std::memcpy(wasm.data, raw_bytes.data(), size);
         }
         
         wasmtime_error_t* error = wasmtime_module_new(engine_, (uint8_t*)wasm.data, wasm.size, &module);

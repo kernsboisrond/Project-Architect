@@ -34,7 +34,13 @@ void run_test(WasmExecutor& executor, MockAudit& audit, const std::string& modul
 }
 
 int main() {
-    WasmExecutor executor("tests/fixtures");
+    auto registry = std::make_shared<ModuleRegistry>();
+    if (!registry->LoadManifest("tests/fixtures/manifest.json").has_value()) {
+        std::cerr << "Failed to construct failure test registry from fixtures.\n";
+        return 1;
+    }
+
+    WasmExecutor executor(registry);
     MockAudit audit;
 
     run_test(executor, audit, "bad", ExecutionError::WasmCompileError);
@@ -42,6 +48,10 @@ int main() {
     run_test(executor, audit, "input_oob", ExecutionError::AllocatorError);
     run_test(executor, audit, "trap", ExecutionError::GuestTrap);
     run_test(executor, audit, "invalid_ptr", ExecutionError::InvalidMemoryBounds);
+    
+    // Phase 11 specific tests natively bridged over to the Registry!
+    run_test(executor, audit, "untrusted_mod", ExecutionError::UntrustedModule);
+    run_test(executor, audit, "unregistered_mod", ExecutionError::CapabilityDenied); // Blocked natively traversing PreFlight.
 
     std::cout << "\nAll Negative-Path Wasm tests passed successfully!\n";
     return 0;

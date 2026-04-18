@@ -1,0 +1,54 @@
+{
+  "manifest_version": "1",
+  "modules": {
+    "echo": {
+      "path": "echo.wat",
+      "sha256": "4a0f36eb2d701b27e5dce04ea159a8403d9f39f2502dcc718c6a1340df437c53",
+      "trusted": true,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    },
+    "bad": {
+      "path": "bad.wat",
+      "sha256": "d0a86d54e36c2840372a01c0b5c439c742e1163134b8a7b1dad7d50eb16f6c0e",
+      "trusted": true,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    },
+    "input_oob": {
+      "path": "input_oob.wat",
+      "sha256": "eab527e0d4b3ffc94c0a2b9eec255d3c995b129a4502eda8633c809becf065f6",
+      "trusted": true,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    },
+    "invalid_ptr": {
+      "path": "invalid_ptr.wat",
+      "sha256": "de33122f649a4dca75ec0d5d8be1c36d8a1aba392bfefe09733f59ed33ac8c71",
+      "trusted": true,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    },
+    "missing_alloc": {
+      "path": "missing_alloc.wat",
+      "sha256": "13bad8f51a11c2232a39a3ca2b88d50b7431203c4f1d453856afa160b39f862f",
+      "trusted": true,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    },
+    "trap": {
+      "path": "trap.wat",
+      "sha256": "a728f08c93a9a12aad961276e07480f331a5389fd5a73c4756812ebcb970f9fd",
+      "trusted": true,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    },
+    "untrusted_mod": {
+      "path": "echo.wat",
+      "sha256": "4a0f36eb2d701b27e5dce04ea159a8403d9f39f2502dcc718c6a1340df437c53",
+      "trusted": false,
+      "guest_abi_version": "1.0",
+      "allowed_exports": ["print"]
+    }
+  }
+}

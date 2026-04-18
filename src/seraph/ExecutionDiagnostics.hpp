@@ -17,7 +17,9 @@ enum class ExecutionError {
     GuestTrap,
     InvalidMemoryBounds,
     AllocatorError,
-    FunctionCallError
+    FunctionCallError,
+    ChecksumMismatch,
+    UntrustedModule
 };
 
 [[nodiscard]]

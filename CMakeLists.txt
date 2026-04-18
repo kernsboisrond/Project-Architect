@@ -85,6 +85,7 @@ add_library(architect_seraph STATIC
     src/seraph/ExecutorStub.cpp
     src/seraph/ExecutionDiagnostics.cpp
     src/seraph/WasmExecutor.cpp
+    src/seraph/ModuleRegistry.cpp
 )
 
 target_include_directories(architect_seraph
@@ -209,10 +210,20 @@ if(BUILD_TESTING)
     )
     add_test(NAME test_wasm_executor_failures COMMAND test_wasm_executor_failures WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
+    add_executable(test_module_registry
+        tests/test_module_registry.cpp
+    )
+    target_link_libraries(test_module_registry
+        PRIVATE
+            architect_seraph
+    )
+    add_test(NAME test_module_registry COMMAND test_module_registry WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
     copy_wasmtime_dll(test_executor)
     copy_wasmtime_dll(test_seraph_contracts)
     copy_wasmtime_dll(test_wasm_executor)
     copy_wasmtime_dll(test_wasm_executor_failures)
+    copy_wasmtime_dll(test_module_registry)
 
     if(ARCHITECT_ENABLE_LLAMA)
         add_executable(test_llama_backend_smoke
