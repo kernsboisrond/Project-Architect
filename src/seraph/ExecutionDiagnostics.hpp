@@ -8,7 +8,16 @@ enum class ExecutionError {
     UnsupportedModule,
     UnsupportedFunction,
     CapabilityDenied,
-    InvalidArguments
+    InvalidArguments,
+    FileNotFound,
+    ModuleLoadError,
+    InvalidModule,
+    WasmCompileError,
+    MissingExport,
+    GuestTrap,
+    InvalidMemoryBounds,
+    AllocatorError,
+    FunctionCallError
 };
 
 [[nodiscard]]

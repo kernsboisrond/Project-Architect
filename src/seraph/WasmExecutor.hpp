@@ -2,9 +2,12 @@
 
 #include "IExecutor.hpp"
 #include <string>
+#include <unordered_map>
 
 // Forward declare Wasmtime C API engine to prevent header leak universally
 struct wasm_engine_t;
+struct wasmtime_module;
+typedef struct wasmtime_module wasmtime_module_t;
 
 namespace Architect::Seraph {
 
@@ -28,6 +31,7 @@ private:
 private:
     std::string base_module_dir_;
     wasm_engine_t* engine_{nullptr};
+    mutable std::unordered_map<std::string, wasmtime_module_t*> cached_modules_;
 };
 
 } // namespace Architect::Seraph

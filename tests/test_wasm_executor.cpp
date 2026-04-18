@@ -50,7 +50,7 @@ int main() {
         return 1;
     }
 
-    if (bad_result.error() != ExecutionError::UnsupportedModule) {
+    if (bad_result.error() != ExecutionError::InvalidModule) {
         std::cerr << "WasmExecutor traversal failed but yielded wrong semantic error.\n";
         return 1;
     }

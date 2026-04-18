@@ -15,7 +15,34 @@ std::string GetSemanticFeedback(ExecutionError error) {
     if (error == ExecutionError::InvalidArguments) {
         return "Execution Denied: The arguments provided to the function do not match the expected schema.";
     }
-    
+    if (error == ExecutionError::FileNotFound) {
+        return "Execution Failed: The module file could not be located. Check the spelling of the target module.";
+    }
+    if (error == ExecutionError::ModuleLoadError) {
+        return "Execution Failed: The module bytes could not be loaded into the WebAssembly engine.";
+    }
+    if (error == ExecutionError::InvalidModule) {
+        return "Execution Failed: Invalid module routing block path.";
+    }
+    if (error == ExecutionError::WasmCompileError) {
+        return "Execution Failed: Target format cannot be compiled natively into Wasm representations.";
+    }
+    if (error == ExecutionError::MissingExport) {
+        return "Execution Failed: Target did not export essential seraph memory ABIs or the required function.";
+    }
+    if (error == ExecutionError::GuestTrap) {
+        return "Execution Failed: The WebAssembly module trapped internally resulting in an unrecoverable fault.";
+    }
+    if (error == ExecutionError::InvalidMemoryBounds) {
+        return "Execution Failed: Parameters or outputs violated the linear memory access constraints or integer bounding boundaries.";
+    }
+    if (error == ExecutionError::AllocatorError) {
+        return "Execution Failed: Invalid seraph_alloc instantiation.";
+    }
+    if (error == ExecutionError::FunctionCallError) {
+        return "Execution Failed: Binding call to the internal Wasm function mismatched signatures natively.";
+    }
+
     return "Execution Denied: An unknown runtime error occurred during invocation.";
 }
 

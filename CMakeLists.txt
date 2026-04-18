@@ -198,11 +198,21 @@ if(BUILD_TESTING)
         PRIVATE
             architect_seraph
     )
-    add_test(NAME test_wasm_executor COMMAND test_wasm_executor)
+    add_test(NAME test_wasm_executor COMMAND test_wasm_executor WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    add_executable(test_wasm_executor_failures
+        tests/test_wasm_executor_failures.cpp
+    )
+    target_link_libraries(test_wasm_executor_failures
+        PRIVATE
+            architect_seraph
+    )
+    add_test(NAME test_wasm_executor_failures COMMAND test_wasm_executor_failures WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
     copy_wasmtime_dll(test_executor)
     copy_wasmtime_dll(test_seraph_contracts)
     copy_wasmtime_dll(test_wasm_executor)
+    copy_wasmtime_dll(test_wasm_executor_failures)
 
     if(ARCHITECT_ENABLE_LLAMA)
         add_executable(test_llama_backend_smoke
