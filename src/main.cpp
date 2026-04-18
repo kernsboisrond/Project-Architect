@@ -1,5 +1,8 @@
 #include "core/CognitiveLoop.hpp"
 #include "seraph/ExecutorStub.hpp"
+#include "seraph/IAuditSink.hpp"
+#include "seraph/WasmExecutor.hpp"
+#include "seraph/InvocationTypes.hpp"
 #include "warden/IBrainBackend.hpp"
 #include "warden/LlamaCppBackend.hpp"
 #include "warden/MockBrainBackend.hpp"
@@ -90,9 +93,30 @@ int main() {
 #endif
 
     Architect::Warden::Engine engine{std::move(brain)};
-    Architect::Seraph::ExecutorStub executor{};
+    
+    std::unique_ptr<Architect::Seraph::IExecutor> executor;
+    const char* executor_env = std::getenv("ARCHITECT_EXECUTOR");
+    if (executor_env && std::string(executor_env) == "wasm") {
+        std::string module_dir = ReadEnvString("ARCHITECT_WASM_MODULE_DIR", "./modules");
+        std::cout << "[Boot] Attempting to mount WasmExecutor under " << module_dir << "\n";
+        try {
+            executor = std::make_unique<Architect::Seraph::WasmExecutor>(module_dir);
+            std::cout << "[Boot] WasmExecutor online.\n";
+        } catch (...) {
+            std::cout << "[Boot] WasmExecutor failed mapping. Falling back to ExecutorStub.\n";
+            executor = std::make_unique<Architect::Seraph::ExecutorStub>();
+        }
+    } else {
+        std::cout << "[Boot] Defaulting to safe ExecutorStub. (set ARCHITECT_EXECUTOR=wasm to override)\n";
+        executor = std::make_unique<Architect::Seraph::ExecutorStub>();
+    }
 
-    CognitiveLoop heartbeat{engine, executor};
+    Architect::Seraph::NoOpAuditSink audit{};
+
+    Architect::Seraph::CapabilityManifest system_policy;
+    system_policy.allowed_exports["echo"].push_back("print");
+
+    CognitiveLoop heartbeat{engine, *executor, audit, system_policy};
     heartbeat.run();
 
     std::cout << "Kernel shutting down...\n";

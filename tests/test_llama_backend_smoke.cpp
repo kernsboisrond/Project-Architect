@@ -57,6 +57,12 @@ bool RunIntentTest(Architect::Warden::LlamaCppBackend& backend,
     try {
         json j = json::parse(*result);
         
+        if (j.contains("frame_id") || j.contains("timestamp_ms")) {
+            std::cerr << "[Result]: FAILED - Model output illegally contains frame_id or timestamp_ms.\n";
+            std::cerr << "[Raw Output]:\n" << *result << "\n\n";
+            return false;
+        }
+
         if (!j.contains("intent_type") || !j.at("intent_type").is_string()) {
             std::cerr << "[Result]: FAILED - Missing or invalid 'intent_type'.\n";
             std::cerr << "[Raw Output]:\n" << *result << "\n\n";

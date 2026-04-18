@@ -45,8 +45,6 @@ int main() {
 
     std::cout << "\n--- Test 1: Valid System2Think ---\n";
     std::string mock_think = R"({
-        "frame_id": 1,
-        "timestamp_ms": 1712200000,
         "intent_type": "System2Think",
         "payload": {
             "internal_monologue": "Let me construct a data path..."
@@ -66,8 +64,6 @@ int main() {
     
     std::cout << "\n--- Test 2: Valid InvokeSeraph ---\n";
     std::string mock_invoke = R"({
-        "frame_id": 3,
-        "timestamp_ms": 1712200020,
         "intent_type": "InvokeSeraph",
         "payload": {
             "target_wasm_module": "math_helper.wasm",
@@ -93,8 +89,6 @@ int main() {
     
     std::cout << "\n--- Test 3: Grammar Violation (Missing Fields) ---\n";
     std::string mock_bad_grammar = R"({
-        "frame_id": 2,
-        "timestamp_ms": 1712200010,
         "intent_type": "QueryMerovingian",
         "payload": {
             "entity_node_id": "user_42"
@@ -112,8 +106,6 @@ int main() {
 
     std::cout << "\n--- Test 4: Unauthorized Intent ---\n";
     std::string mock_unauthorized = R"({
-        "frame_id": 99,
-        "timestamp_ms": 1712200999,
         "intent_type": "ExplodeTheInternet",
         "payload": {}
     })"; 
@@ -129,8 +121,6 @@ int main() {
     
     std::cout << "\n--- Test 5: Valid BroadcastSmith ---\n";
     std::string mock_broadcast = R"({
-        "frame_id": 4,
-        "timestamp_ms": 1712200030,
         "intent_type": "BroadcastSmith",
         "payload": {
             "target_agent_id": 99,
@@ -161,8 +151,6 @@ int main() {
 
     std::cout << "\n--- Test 7: Missing target_function ---\n";
     std::string mock_missing_func = R"({
-        "frame_id": 7,
-        "timestamp_ms": 1712200050,
         "intent_type": "InvokeSeraph",
         "payload": {
             "target_wasm_module": "math_helper.wasm",
@@ -182,8 +170,6 @@ int main() {
 
     std::cout << "\n--- Test 8: Invalid byte in BroadcastSmith ---\n";
     std::string mock_invalid_byte = R"({
-        "frame_id": 8,
-        "timestamp_ms": 1712200060,
         "intent_type": "BroadcastSmith",
         "payload": {
             "target_agent_id": 99,

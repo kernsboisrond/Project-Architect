@@ -1,22 +1,14 @@
 #pragma once
 
-#include "InvocationTypes.hpp"
-#include <expected>
+#include "IExecutor.hpp"
 
 namespace Architect::Seraph {
 
-enum class ExecutionError {
-    UnsupportedModule,
-    UnsupportedFunction,
-    CapabilityDenied,
-    InvalidArguments
-};
-
-class ExecutorStub {
+class ExecutorStub final : public IExecutor {
 public:
     [[nodiscard]]
     std::expected<InvocationResult, ExecutionError>
-    Execute(const InvocationRequest& request) const;
+    Execute(const InvocationRequest& request, IAuditSink& audit) const override;
 
 private:
     [[nodiscard]]

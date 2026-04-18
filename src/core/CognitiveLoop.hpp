@@ -1,7 +1,8 @@
 #pragma once
 
 #include "core/AgentContext.hpp"
-#include "seraph/ExecutorStub.hpp"
+#include "seraph/IExecutor.hpp"
+#include "seraph/IAuditSink.hpp"
 #include "warden/CognitiveFrame.hpp"
 #include "warden/WardenEngine.hpp"
 
@@ -15,11 +16,15 @@ struct DispatchOutcome {
 class CognitiveLoop {
 private:
     Architect::Warden::Engine& engine_;
-    Architect::Seraph::ExecutorStub& executor_;
+    Architect::Seraph::IExecutor& executor_;
+    Architect::Seraph::IAuditSink& audit_;
+    const Architect::Seraph::CapabilityManifest& system_capabilities_;
 
 public:
     CognitiveLoop(Architect::Warden::Engine& engine,
-                  Architect::Seraph::ExecutorStub& executor);
+                  Architect::Seraph::IExecutor& executor,
+                  Architect::Seraph::IAuditSink& audit,
+                  const Architect::Seraph::CapabilityManifest& system_capabilities);
 
     void run();
 

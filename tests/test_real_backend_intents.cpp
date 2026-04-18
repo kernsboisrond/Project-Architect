@@ -7,6 +7,8 @@
 #include <vector>
 #include <cstdlib>
 #include <filesystem>
+#include <variant>
+#include <cstdint>
 
 #if ARCHITECT_ENABLE_LLAMA
 namespace {
@@ -31,7 +33,8 @@ int ReadEnvInt(const char* name, int fallback) {
 
 bool RunIntentTest(Architect::Warden::Engine& engine, 
                    const std::string& stimulus, 
-                   const std::string& expected_intent_name) 
+                   const std::string& expected_intent_name,
+                   std::uint64_t& last_frame_id) 
 {
     std::cout << "--- ENFORCE COGNITION TEST ---\n";
     std::cout << "[Stimulus]: " << stimulus << "\n";
@@ -47,6 +50,21 @@ bool RunIntentTest(Architect::Warden::Engine& engine,
         std::cerr << "[Result]: FAILED - Warden rejected the output format entirely.\n\n";
         return false;
     }
+    
+    if (result->frame_id == 0) {
+        std::cerr << "[Result]: FAILED - frame_id is 0.\n";
+        return false;
+    }
+    if (result->frame_id <= last_frame_id) {
+        std::cerr << "[Result]: FAILED - frame_id did not strictly increase. Last: " << last_frame_id << " New: " << result->frame_id << "\n";
+        return false;
+    }
+    if (result->timestamp_ms == 0) {
+        std::cerr << "[Result]: FAILED - timestamp_ms is 0.\n";
+        return false;
+    }
+    
+    last_frame_id = result->frame_id;
     
     bool matched = false;
 
@@ -117,11 +135,12 @@ int main() {
     std::cout << "[Test] Engine and Backend are ready.\n\n";
 
     bool all_passed = true;
+    std::uint64_t last_frame_id = 0;
 
-    all_passed &= RunIntentTest(engine, "Think privately about a safe hello.", "System2Think");
-    all_passed &= RunIntentTest(engine, "Query the relation for entity hello.", "QueryMerovingian");
-    all_passed &= RunIntentTest(engine, "Say hello using echo.", "InvokeSeraph");
-    all_passed &= RunIntentTest(engine, "Print hello through echo.", "InvokeSeraph");
+    all_passed &= RunIntentTest(engine, "Think privately about a safe hello.", "System2Think", last_frame_id);
+    all_passed &= RunIntentTest(engine, "Query the relation for entity hello.", "QueryMerovingian", last_frame_id);
+    all_passed &= RunIntentTest(engine, "Say hello using echo.", "InvokeSeraph", last_frame_id);
+    all_passed &= RunIntentTest(engine, "Print hello through echo.", "InvokeSeraph", last_frame_id);
 
     if (all_passed) {
         std::cout << "[Test] ALL TESTS PASSED. Warden acceptance validation completed successfully.\n";

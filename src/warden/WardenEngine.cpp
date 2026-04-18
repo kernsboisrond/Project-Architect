@@ -3,6 +3,7 @@
 #include "GrammarConstraints.hpp"
 #include "PromptAssembler.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <cstdint>
 #include <iostream>
@@ -159,47 +160,53 @@ Engine::EnforceCognition(const Architect::Core::AgentContext& context) {
         std::cout << "[Warden] Raw backend output:\n" << *raw_json << "\n";
     }
 
-    return DeserializeSIMD(*raw_json);
+    auto intent_result = DeserializeIntentOnly(*raw_json);
+    if (!intent_result.has_value()) {
+        return std::unexpected(intent_result.error());
+    }
+
+    CognitiveFrame frame{};
+    frame.frame_id = NextFrameId();
+    frame.timestamp_ms = CurrentTimestampMs();
+    frame.intent = std::move(*intent_result);
+
+    return frame;
 }
 
-std::expected<CognitiveFrame, WardenError>
-Engine::DeserializeSIMD(std::string_view validated_json) const {
+std::uint64_t Engine::NextFrameId() {
+    return next_frame_id_++;
+}
+
+std::uint64_t Engine::CurrentTimestampMs() const {
+    const auto now = std::chrono::system_clock::now();
+    return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+    ).count());
+}
+
+std::expected<AgentIntent, WardenError>
+Engine::DeserializeIntentOnly(std::string_view validated_json) const {
     try {
         const json j = json::parse(validated_json);
 
         if (!j.is_object()) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: root must be a JSON object.\n";
+            std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: root must be a JSON object.\n";
             return std::unexpected(WardenError::GrammarViolation);
         }
 
-        if (!HasOnlyKeys(j, {"frame_id", "timestamp_ms", "intent_type", "payload"})) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: unauthorized root field detected.\n";
+        if (!HasOnlyKeys(j, {"intent_type", "payload"})) {
+            std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: unauthorized root field detected.\n";
             return std::unexpected(WardenError::GrammarViolation);
         }
 
-        if (!j.contains("frame_id") ||
-            !j.contains("timestamp_ms") ||
-            !j.contains("intent_type") ||
+        if (!j.contains("intent_type") ||
             !j.contains("payload")) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: missing required root field(s).\n";
-            return std::unexpected(WardenError::GrammarViolation);
-        }
-
-        std::uint64_t frame_id = 0;
-        std::uint64_t timestamp_ms = 0;
-
-        if (!TryReadUInt64(j.at("frame_id"), frame_id)) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: frame_id must be a non-negative integer.\n";
-            return std::unexpected(WardenError::GrammarViolation);
-        }
-
-        if (!TryReadUInt64(j.at("timestamp_ms"), timestamp_ms)) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: timestamp_ms must be a non-negative integer.\n";
+            std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: missing required root field(s).\n";
             return std::unexpected(WardenError::GrammarViolation);
         }
 
         if (!j.at("intent_type").is_string()) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: intent_type must be a string.\n";
+            std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: intent_type must be a string.\n";
             return std::unexpected(WardenError::GrammarViolation);
         }
 
@@ -207,26 +214,21 @@ Engine::DeserializeSIMD(std::string_view validated_json) const {
         const json& payload = j.at("payload");
 
         if (!payload.is_object()) {
-            std::cerr << "Engine::DeserializeSIMD - GrammarViolation: payload must be an object.\n";
+            std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: payload must be an object.\n";
             return std::unexpected(WardenError::GrammarViolation);
         }
-
-        CognitiveFrame frame{};
-        frame.frame_id = frame_id;
-        frame.timestamp_ms = timestamp_ms;
 
         if (intent_type == "System2Think") {
             if (!HasOnlyKeys(payload, {"internal_monologue"}) ||
                 !payload.contains("internal_monologue") ||
                 !payload.at("internal_monologue").is_string()) {
-                std::cerr << "Engine::DeserializeSIMD - GrammarViolation: invalid System2Think payload.\n";
+                std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: invalid System2Think payload.\n";
                 return std::unexpected(WardenError::GrammarViolation);
             }
 
-            frame.intent = System2Think{
+            return System2Think{
                 payload.at("internal_monologue").get<std::string>()
             };
-            return frame;
         }
 
         if (intent_type == "QueryMerovingian") {
@@ -235,15 +237,14 @@ Engine::DeserializeSIMD(std::string_view validated_json) const {
                 !payload.contains("relation_type") ||
                 !payload.at("entity_node_id").is_string() ||
                 !payload.at("relation_type").is_string()) {
-                std::cerr << "Engine::DeserializeSIMD - GrammarViolation: invalid QueryMerovingian payload.\n";
+                std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: invalid QueryMerovingian payload.\n";
                 return std::unexpected(WardenError::GrammarViolation);
             }
 
-            frame.intent = QueryMerovingian{
+            return QueryMerovingian{
                 payload.at("entity_node_id").get<std::string>(),
                 payload.at("relation_type").get<std::string>()
             };
-            return frame;
         }
 
         if (intent_type == "InvokeSeraph") {
@@ -253,22 +254,21 @@ Engine::DeserializeSIMD(std::string_view validated_json) const {
                 !payload.contains("arguments") ||
                 !payload.at("target_wasm_module").is_string() ||
                 !payload.at("target_function").is_string()) {
-                std::cerr << "Engine::DeserializeSIMD - GrammarViolation: invalid InvokeSeraph payload.\n";
+                std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: invalid InvokeSeraph payload.\n";
                 return std::unexpected(WardenError::GrammarViolation);
             }
 
             std::unordered_map<std::string, std::string> args;
             if (!TryReadStringMap(payload.at("arguments"), args)) {
-                std::cerr << "Engine::DeserializeSIMD - GrammarViolation: InvokeSeraph arguments must be a string:string map.\n";
+                std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: InvokeSeraph arguments must be a string:string map.\n";
                 return std::unexpected(WardenError::GrammarViolation);
             }
 
-            frame.intent = InvokeSeraph{
+            return InvokeSeraph{
                 payload.at("target_wasm_module").get<std::string>(),
                 payload.at("target_function").get<std::string>(),
                 std::move(args)
             };
-            return frame;
         }
 
         if (intent_type == "BroadcastSmith") {
@@ -276,13 +276,13 @@ Engine::DeserializeSIMD(std::string_view validated_json) const {
                 !payload.contains("target_agent_id") ||
                 !payload.contains("binary_payload") ||
                 !payload.at("binary_payload").is_array()) {
-                std::cerr << "Engine::DeserializeSIMD - GrammarViolation: invalid BroadcastSmith payload.\n";
+                std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: invalid BroadcastSmith payload.\n";
                 return std::unexpected(WardenError::GrammarViolation);
             }
 
             std::uint64_t target_agent_id = 0;
             if (!TryReadUInt64(payload.at("target_agent_id"), target_agent_id)) {
-                std::cerr << "Engine::DeserializeSIMD - GrammarViolation: target_agent_id must be a non-negative integer.\n";
+                std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: target_agent_id must be a non-negative integer.\n";
                 return std::unexpected(WardenError::GrammarViolation);
             }
 
@@ -292,31 +292,30 @@ Engine::DeserializeSIMD(std::string_view validated_json) const {
             for (const auto& byte_val : payload.at("binary_payload")) {
                 std::uint8_t parsed_byte = 0;
                 if (!TryReadByte(byte_val, parsed_byte)) {
-                    std::cerr << "Engine::DeserializeSIMD - GrammarViolation: binary_payload must contain bytes in range 0..255.\n";
+                    std::cerr << "Engine::DeserializeIntentOnly - GrammarViolation: binary_payload must contain bytes in range 0..255.\n";
                     return std::unexpected(WardenError::GrammarViolation);
                 }
                 binary_payload.push_back(parsed_byte);
             }
 
-            frame.intent = BroadcastSmith{
+            return BroadcastSmith{
                 target_agent_id,
                 std::move(binary_payload)
             };
-            return frame;
         }
 
-        std::cerr << "Engine::DeserializeSIMD - UnauthorizedIntent: unknown intent_type: "
+        std::cerr << "Engine::DeserializeIntentOnly - UnauthorizedIntent: unknown intent_type: "
                   << intent_type << "\n";
         return std::unexpected(WardenError::UnauthorizedIntent);
 
     } catch (const json::parse_error& e) {
-        std::cerr << "Engine::DeserializeSIMD - JSON parser error: " << e.what() << "\n";
+        std::cerr << "Engine::DeserializeIntentOnly - JSON parser error: " << e.what() << "\n";
         return std::unexpected(WardenError::GrammarViolation);
     } catch (const json::type_error& e) {
-        std::cerr << "Engine::DeserializeSIMD - JSON type error: " << e.what() << "\n";
+        std::cerr << "Engine::DeserializeIntentOnly - JSON type error: " << e.what() << "\n";
         return std::unexpected(WardenError::GrammarViolation);
     } catch (const json::out_of_range& e) {
-        std::cerr << "Engine::DeserializeSIMD - JSON field missing: " << e.what() << "\n";
+        std::cerr << "Engine::DeserializeIntentOnly - JSON field missing: " << e.what() << "\n";
         return std::unexpected(WardenError::GrammarViolation);
     }
 }

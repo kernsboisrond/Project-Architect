@@ -15,6 +15,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(json)
 
+set(WASMTIME_URL "https://github.com/bytecodealliance/wasmtime/releases/download/v20.0.2/wasmtime-v20.0.2-x86_64-windows-c-api.zip")
+FetchContent_Declare(
+    wasmtime_c_api
+    URL ${WASMTIME_URL}
+)
+FetchContent_MakeAvailable(wasmtime_c_api)
+
 # Warden
 add_library(architect_warden STATIC
     src/warden/WardenEngine.cpp
@@ -76,12 +83,30 @@ endif()
 # Seraph
 add_library(architect_seraph STATIC
     src/seraph/ExecutorStub.cpp
+    src/seraph/ExecutionDiagnostics.cpp
+    src/seraph/WasmExecutor.cpp
 )
 
 target_include_directories(architect_seraph
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+    PRIVATE
+        ${wasmtime_c_api_SOURCE_DIR}/include
 )
+
+target_link_libraries(architect_seraph
+    PUBLIC
+        nlohmann_json::nlohmann_json
+        ${wasmtime_c_api_SOURCE_DIR}/lib/wasmtime.dll.lib
+)
+
+function(copy_wasmtime_dll target)
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${wasmtime_c_api_SOURCE_DIR}/lib/wasmtime.dll"
+        $<TARGET_FILE_DIR:${target}>
+    )
+endfunction()
 
 # Core
 add_library(architect_core STATIC
@@ -111,6 +136,8 @@ target_link_libraries(architect
         architect_seraph
 )
 
+copy_wasmtime_dll(architect)
+
 if(BUILD_TESTING)
 
     add_executable(test_cognitive_frame
@@ -127,6 +154,15 @@ if(BUILD_TESTING)
             architect_warden
     )
     add_test(NAME test_warden COMMAND test_warden)
+
+    add_executable(test_frame_metadata
+        tests/test_frame_metadata.cpp
+    )
+    target_link_libraries(test_frame_metadata
+        PRIVATE
+            architect_warden
+    )
+    add_test(NAME test_frame_metadata COMMAND test_frame_metadata)
 
     add_executable(test_prompt_assembler
         tests/test_prompt_assembler.cpp
@@ -145,6 +181,28 @@ if(BUILD_TESTING)
             architect_seraph
     )
     add_test(NAME test_executor COMMAND test_executor)
+
+    add_executable(test_seraph_contracts
+        tests/test_seraph_contracts.cpp
+    )
+    target_link_libraries(test_seraph_contracts
+        PRIVATE
+            architect_seraph
+    )
+    add_test(NAME test_seraph_contracts COMMAND test_seraph_contracts)
+
+    add_executable(test_wasm_executor
+        tests/test_wasm_executor.cpp
+    )
+    target_link_libraries(test_wasm_executor
+        PRIVATE
+            architect_seraph
+    )
+    add_test(NAME test_wasm_executor COMMAND test_wasm_executor)
+
+    copy_wasmtime_dll(test_executor)
+    copy_wasmtime_dll(test_seraph_contracts)
+    copy_wasmtime_dll(test_wasm_executor)
 
     if(ARCHITECT_ENABLE_LLAMA)
         add_executable(test_llama_backend_smoke
@@ -167,6 +225,7 @@ if(BUILD_TESTING)
         )
         add_test(NAME test_real_backend_intents COMMAND test_real_backend_intents)
         set_tests_properties(test_real_backend_intents PROPERTIES TIMEOUT 120)
+        copy_wasmtime_dll(test_real_backend_intents)
     endif()
 
 endif()

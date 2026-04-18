@@ -4,6 +4,7 @@
 #include "IBrainBackend.hpp"
 #include "core/AgentContext.hpp"
 
+#include <cstdint>
 #include <expected>
 #include <memory>
 #include <string>
@@ -15,6 +16,7 @@ class Engine {
 private:
     std::string active_gbnf_grammar_;
     std::unique_ptr<IBrainBackend> brain_;
+    std::uint64_t next_frame_id_{1};
 
 public:
     explicit Engine(std::unique_ptr<IBrainBackend> brain);
@@ -30,8 +32,14 @@ public:
 
 private:
     [[nodiscard]]
-    std::expected<CognitiveFrame, WardenError>
-    DeserializeSIMD(std::string_view validated_json) const;
+    std::uint64_t NextFrameId();
+
+    [[nodiscard]]
+    std::uint64_t CurrentTimestampMs() const;
+
+    [[nodiscard]]
+    std::expected<AgentIntent, WardenError>
+    DeserializeIntentOnly(std::string_view validated_json) const;
 };
 
 } // namespace Architect::Warden

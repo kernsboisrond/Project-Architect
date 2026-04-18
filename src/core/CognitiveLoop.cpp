@@ -17,8 +17,10 @@ constexpr std::size_t kMaxRecoveryAttempts = 2;
 }
 
 CognitiveLoop::CognitiveLoop(Architect::Warden::Engine& engine,
-                             Architect::Seraph::ExecutorStub& executor)
-    : engine_(engine), executor_(executor) {}
+                             Architect::Seraph::IExecutor& executor,
+                             Architect::Seraph::IAuditSink& audit,
+                             const Architect::Seraph::CapabilityManifest& system_capabilities)
+    : engine_(engine), executor_(executor), audit_(audit), system_capabilities_(system_capabilities) {}
 
 void CognitiveLoop::run() {
     std::cout << "[ARCHITECT] Autonomous Kernel Online.\n";
@@ -120,11 +122,13 @@ DispatchOutcome CognitiveLoop::DispatchIntent(
                 req.module_name = s.target_wasm_module;
                 req.function_name = s.target_function;
                 req.arguments = s.arguments;
+                req.capabilities = system_capabilities_;
 
-                const auto result = executor_.Execute(req);
+                const auto result = executor_.Execute(req, audit_);
                 if (!result.has_value()) {
-                    std::cout << "status: SERAPH EXECUTION FAILED.\n";
-                    return {false, "SERAPH REJECTION: execution denied"};
+                    std::cout << "status: SERAPH EXECUTION FAILED.\n"
+                              << "reason: " << Architect::Seraph::GetSemanticFeedback(result.error()) << "\n";
+                    return {false, Architect::Seraph::GetSemanticFeedback(result.error())};
                 }
 
                 std::cout
