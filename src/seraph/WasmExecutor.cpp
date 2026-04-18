@@ -83,6 +83,11 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
         return std::unexpected(ExecutionError::UntrustedModule);
     }
     
+    if (profile->guest_abi_version != std::string(Abi::kVersion)) {
+        audit.LogExecutionFailure(request, ExecutionError::ModuleLoadError);
+        return std::unexpected(ExecutionError::ModuleLoadError);
+    }
+    
     wasmtime_module_t* module = nullptr;
     
     // Phase 10C: Check Cache
@@ -102,11 +107,18 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
         }
 
         file.seekg(0, std::ios::end);
-        size_t size = file.tellg();
+        std::streamsize size = file.tellg();
+        if (size <= 0) {
+            audit.LogExecutionFailure(request, ExecutionError::ModuleLoadError);
+            return std::unexpected(ExecutionError::ModuleLoadError);
+        }
         file.seekg(0, std::ios::beg);
         
         std::vector<uint8_t> raw_bytes(size);
-        file.read(reinterpret_cast<char*>(raw_bytes.data()), size);
+        if (!file.read(reinterpret_cast<char*>(raw_bytes.data()), size)) {
+            audit.LogExecutionFailure(request, ExecutionError::ModuleLoadError);
+            return std::unexpected(ExecutionError::ModuleLoadError);
+        }
 
         // Phase 11B: Checksum Cryptographic Verification
         std::string computed_hash = ModuleRegistry::ComputeSha256(raw_bytes);

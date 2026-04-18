@@ -19,6 +19,8 @@ namespace Architect::Seraph::Abi {
  *   - lower 32 bits = i32 len
  */
 
+constexpr std::string_view kVersion = "1.0";
+
 constexpr std::string_view kExportAlloc = "seraph_alloc";
 constexpr std::string_view kExportFree  = "seraph_free";
 constexpr std::string_view kExportMemory = "memory";

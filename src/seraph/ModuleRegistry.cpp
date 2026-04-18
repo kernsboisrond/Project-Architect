@@ -151,6 +151,7 @@ ModuleRegistry::LoadManifest(const std::filesystem::path& manifest_path) {
 
         if (data.contains("allowed_exports") && data["allowed_exports"].is_array()) {
             for (const auto& exp : data["allowed_exports"]) {
+                if (!exp.is_string()) return std::unexpected(RegistryError::InvalidSchema);
                 RM.capabilities.allowed_exports[module_name].push_back(exp.get<std::string>());
             }
         }
