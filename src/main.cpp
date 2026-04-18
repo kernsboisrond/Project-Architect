@@ -96,6 +96,9 @@ int main() {
     Architect::Warden::Engine engine{std::move(brain)};
     
     std::unique_ptr<Architect::Seraph::IExecutor> executor;
+    Architect::Seraph::CapabilityManifest system_policy;
+    std::vector<std::string> prompt_capabilities;
+
     const char* executor_env = std::getenv("ARCHITECT_EXECUTOR");
     if (executor_env && std::string(executor_env) == "wasm") {
         std::string manifest_path = ReadEnvString("ARCHITECT_WASM_MANIFEST", "./tests/fixtures/manifest.json");
@@ -104,27 +107,35 @@ int main() {
             auto registry = std::make_shared<Architect::Seraph::ModuleRegistry>();
             auto load_res = registry->LoadManifest(manifest_path);
             if (!load_res.has_value()) {
-                 std::cerr << "[Boot] Failed to load Wasm Registry manifest. Falling back to ExecutorStub.\n";
-                 executor = std::make_unique<Architect::Seraph::ExecutorStub>();
-            } else {
-                 executor = std::make_unique<Architect::Seraph::WasmExecutor>(registry);
-                 std::cout << "[Boot] WasmExecutor online.\n";
+                 std::string err_msg;
+                 switch (load_res.error()) {
+                     case Architect::Seraph::RegistryError::ManifestNotFound: err_msg = "Manifest missing"; break;
+                     case Architect::Seraph::RegistryError::ManifestParseFailed: err_msg = "Manifest parse failed"; break;
+                     case Architect::Seraph::RegistryError::InvalidSchema: err_msg = "Invalid schema"; break;
+                     case Architect::Seraph::RegistryError::UnsupportedManifestVersion: err_msg = "Unsupported manifest version"; break;
+                     default: err_msg = "Unknown registry error";
+                 }
+                 std::cerr << "[Boot] FATAL: Failed to load Wasm Registry manifest (" << err_msg << ").\n";
+                 return 1;
             }
+            executor = std::make_unique<Architect::Seraph::WasmExecutor>(registry);
+            system_policy = registry->GenerateSystemPolicy();
+            prompt_capabilities = registry->DescribePromptCapabilities();
+            std::cout << "[Boot] WasmExecutor online.\n";
         } catch (...) {
-            std::cout << "[Boot] WasmExecutor failed mapping. Falling back to ExecutorStub.\n";
-            executor = std::make_unique<Architect::Seraph::ExecutorStub>();
+            std::cerr << "[Boot] FATAL: WasmExecutor failed mapping unexpectedly.\n";
+            return 1;
         }
     } else {
         std::cout << "[Boot] Defaulting to safe ExecutorStub. (set ARCHITECT_EXECUTOR=wasm to override)\n";
         executor = std::make_unique<Architect::Seraph::ExecutorStub>();
+        system_policy.allowed_exports["echo"].push_back("print");
+        prompt_capabilities = {"echo::print"};
     }
 
     Architect::Seraph::NoOpAuditSink audit{};
 
-    Architect::Seraph::CapabilityManifest system_policy;
-    system_policy.allowed_exports["echo"].push_back("print");
-
-    CognitiveLoop heartbeat{engine, *executor, audit, system_policy};
+    CognitiveLoop heartbeat{engine, *executor, audit, system_policy, prompt_capabilities};
     heartbeat.run();
 
     std::cout << "Kernel shutting down...\n";

@@ -19,14 +19,16 @@ constexpr std::size_t kMaxRecoveryAttempts = 2;
 CognitiveLoop::CognitiveLoop(Architect::Warden::Engine& engine,
                              Architect::Seraph::IExecutor& executor,
                              Architect::Seraph::IAuditSink& audit,
-                             const Architect::Seraph::CapabilityManifest& system_capabilities)
-    : engine_(engine), executor_(executor), audit_(audit), system_capabilities_(system_capabilities) {}
+                             const Architect::Seraph::CapabilityManifest& system_capabilities,
+                             std::vector<std::string> prompt_capabilities)
+    : engine_(engine), executor_(executor), audit_(audit), 
+      system_capabilities_(system_capabilities), prompt_capabilities_(std::move(prompt_capabilities)) {}
 
 void CognitiveLoop::run() {
     std::cout << "[ARCHITECT] Autonomous Kernel Online.\n";
 
     Architect::Core::AgentContext context;
-    context.available_capabilities = {"echo::print"};
+    context.available_capabilities = prompt_capabilities_;
 
     while (true) {
         if (!context.last_action_feedback.has_value()) {

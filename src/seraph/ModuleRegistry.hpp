@@ -41,6 +41,12 @@ public:
     [[nodiscard]]
     const RegisteredModule* GetModuleProfile(const std::string& module_name) const;
 
+    [[nodiscard]]
+    CapabilityManifest GenerateSystemPolicy() const;
+
+    [[nodiscard]]
+    std::vector<std::string> DescribePromptCapabilities() const;
+
     static std::string ComputeSha256(const std::vector<uint8_t>& binary_payload);
 
 private:

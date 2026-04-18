@@ -1,4 +1,5 @@
 #include "ModuleRegistry.hpp"
+#include "SeraphGuestAbi.hpp"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <sstream>
@@ -168,6 +169,38 @@ const RegisteredModule* ModuleRegistry::GetModuleProfile(const std::string& modu
         return &(it->second);
     }
     return nullptr;
+}
+
+CapabilityManifest ModuleRegistry::GenerateSystemPolicy() const {
+    CapabilityManifest policy;
+    for (const auto& [name, mod] : tracked_modules_) {
+        // Enforce Phase 12 constraints directly:
+        if (mod.trusted && mod.guest_abi_version == Architect::Seraph::Abi::kVersion) {
+            auto it = mod.capabilities.allowed_exports.find(name);
+            if (it != mod.capabilities.allowed_exports.end()) {
+                for (const auto& exp : it->second) {
+                    policy.allowed_exports[name].push_back(exp);
+                }
+            }
+        }
+    }
+    return policy;
+}
+
+std::vector<std::string> ModuleRegistry::DescribePromptCapabilities() const {
+    std::vector<std::string> summaries;
+    for (const auto& [name, mod] : tracked_modules_) {
+        // Only trusted and ABI compatible bindings!
+        if (mod.trusted && mod.guest_abi_version == Architect::Seraph::Abi::kVersion) {
+            auto it = mod.capabilities.allowed_exports.find(name);
+            if (it != mod.capabilities.allowed_exports.end()) {
+                for (const auto& exp : it->second) {
+                    summaries.push_back(name + "::" + exp);
+                }
+            }
+        }
+    }
+    return summaries;
 }
 
 } // namespace Architect::Seraph
