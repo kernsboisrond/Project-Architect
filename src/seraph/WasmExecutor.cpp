@@ -11,21 +11,29 @@
 
 namespace Architect::Seraph {
 
-WasmExecutor::WasmExecutor(std::shared_ptr<ModuleRegistry> registry)
-    : registry_(std::move(registry)) {
+WasmExecutor::WasmExecutor(std::shared_ptr<ModuleRegistry> registry, const RuntimeLimits& limits)
+    : registry_(std::move(registry)), limits_(limits) {
     wasm_config_t* config = wasm_config_new();
+    wasmtime_config_consume_fuel_set(config, true);
     engine_ = wasm_engine_new_with_config(config);
 }
 
 WasmExecutor::~WasmExecutor() {
+    ClearCache();
+    if (engine_) {
+        wasm_engine_delete(engine_);
+    }
+}
+
+size_t WasmExecutor::InspectCacheCount() const {
+    return cached_modules_.size();
+}
+
+void WasmExecutor::ClearCache() {
     for (auto& [name, module] : cached_modules_) {
         wasmtime_module_delete(module);
     }
     cached_modules_.clear();
-    
-    if (engine_) {
-        wasm_engine_delete(engine_);
-    }
 }
 
 bool WasmExecutor::PreFlightCheck(const InvocationRequest& request) const {
@@ -73,6 +81,14 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
     }
     
     const RegisteredModule* const profile = registry_->GetModuleProfile(request.module_name);
+    
+    if (!profile || !profile->trusted || profile->guest_abi_version != std::string(Abi::kVersion)) {
+        if (auto it = cached_modules_.find(request.module_name); it != cached_modules_.end()) {
+            wasmtime_module_delete(it->second);
+            cached_modules_.erase(it);
+        }
+    }
+
     if (!profile) {
         audit.LogExecutionFailure(request, ExecutionError::UnsupportedModule); // Covered by PreFlight normally
         return std::unexpected(ExecutionError::UnsupportedModule);
@@ -155,6 +171,14 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
     wasmtime_store_t* store = wasmtime_store_new(engine_, nullptr, nullptr);
     wasmtime_context_t* context = wasmtime_store_context(store);
 
+    wasmtime_error_t* fuel_err = wasmtime_context_set_fuel(context, limits_.max_fuel);
+    if (fuel_err) {
+        wasmtime_error_delete(fuel_err);
+        wasmtime_store_delete(store);
+        audit.LogExecutionFailure(request, ExecutionError::FunctionCallError);
+        return std::unexpected(ExecutionError::FunctionCallError);
+    }
+
     wasmtime_linker_t* linker = wasmtime_linker_new(engine_);
     wasmtime_instance_t instance;
     wasm_trap_t* trap = nullptr;
@@ -206,6 +230,13 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
 
     // Step 1: Memory Allocation
     std::string payload_json = nlohmann::json(request.arguments).dump();
+    if (payload_json.size() > limits_.max_input_size) {
+        wasmtime_linker_delete(linker);
+        wasmtime_store_delete(store);
+        audit.LogExecutionFailure(request, ExecutionError::PayloadTooLarge);
+        return std::unexpected(ExecutionError::PayloadTooLarge);
+    }
+
     wasmtime_val_t alloc_args[1] = {{.kind = WASMTIME_I32, .of = {.i32 = static_cast<int32_t>(payload_json.size())}}};
     wasmtime_val_t alloc_results[1] = {};
 
@@ -251,6 +282,12 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
     error = wasmtime_func_call(context, &ext_func.of.func, func_args, 2, func_results, 1, &trap);
     if (error || trap) {
         ExecutionError f_err = trap ? ExecutionError::GuestTrap : ExecutionError::FunctionCallError;
+        if (trap) {
+            wasmtime_trap_code_t trap_code;
+            if (wasmtime_trap_code(trap, &trap_code) && trap_code == WASMTIME_TRAP_CODE_OUT_OF_FUEL) {
+                f_err = ExecutionError::FuelExhausted;
+            }
+        }
         cleanup_and_free(payload_ptr, payload_json.size()); // Clean up injected payload allocated bytes
         if (error) wasmtime_error_delete(error);
         if (trap) wasm_trap_delete(trap);
@@ -273,6 +310,13 @@ WasmExecutor::Execute(const InvocationRequest& request, IAuditSink& audit) const
     
     InvocationResult result;
     if (safe_result_ptr + safe_result_len <= static_cast<uint64_t>(memory_size)) {
+        if (safe_result_len > limits_.max_output_size) {
+            cleanup_and_free(result_ptr, result_len);
+            wasmtime_linker_delete(linker);
+            wasmtime_store_delete(store);
+            audit.LogExecutionFailure(request, ExecutionError::PayloadTooLarge);
+            return std::unexpected(ExecutionError::PayloadTooLarge);
+        }
         result.success = true;
         result.output = std::string(reinterpret_cast<const char*>(memory_data + result_ptr), result_len);
         result.status_code = 0;

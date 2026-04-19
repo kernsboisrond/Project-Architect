@@ -48,6 +48,12 @@ std::string GetSemanticFeedback(ExecutionError error) {
     if (error == ExecutionError::UntrustedModule) {
         return "Execution Failed: WebAssembly module is identified but explicitly mapped as untrusted within the authoritative registry constraints.";
     }
+    if (error == ExecutionError::PayloadTooLarge) {
+        return "Execution Failed: The input or output payload exceeded the maximum permitted size limitations.";
+    }
+    if (error == ExecutionError::FuelExhausted) {
+        return "Execution Failed: The module exceeded its permitted execution instructions (fuel exhaustion).";
+    }
 
     return "Execution Denied: An unknown runtime error occurred during invocation.";
 }

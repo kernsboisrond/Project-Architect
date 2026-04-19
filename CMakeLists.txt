@@ -84,6 +84,7 @@ endif()
 add_library(architect_seraph STATIC
     src/seraph/ExecutorStub.cpp
     src/seraph/ExecutionDiagnostics.cpp
+    src/seraph/FileAuditSink.cpp
     src/seraph/WasmExecutor.cpp
     src/seraph/ModuleRegistry.cpp
 )
@@ -219,11 +220,24 @@ if(BUILD_TESTING)
     )
     add_test(NAME test_module_registry COMMAND test_module_registry WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
+    add_executable(test_operational_harness
+        tests/test_operational_harness.cpp
+    )
+    target_link_libraries(test_operational_harness
+        PRIVATE
+            architect_seraph
+            architect_warden
+            architect_core
+    )
+    target_include_directories(test_operational_harness PRIVATE src)
+    add_test(NAME test_operational_harness COMMAND test_operational_harness WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
     copy_wasmtime_dll(test_executor)
     copy_wasmtime_dll(test_seraph_contracts)
     copy_wasmtime_dll(test_wasm_executor)
     copy_wasmtime_dll(test_wasm_executor_failures)
     copy_wasmtime_dll(test_module_registry)
+    copy_wasmtime_dll(test_operational_harness)
 
     if(ARCHITECT_ENABLE_LLAMA)
         add_executable(test_llama_backend_smoke

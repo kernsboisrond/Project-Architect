@@ -203,4 +203,37 @@ std::vector<std::string> ModuleRegistry::DescribePromptCapabilities() const {
     return summaries;
 }
 
+std::expected<void, RegistryError>
+ModuleRegistry::ReloadManifest(const std::filesystem::path& manifest_path) {
+    // Rely on LoadManifest to re-parse and overwrite tracked_modules_
+    return LoadManifest(manifest_path);
+}
+
+void ModuleRegistry::RevokeModule(const std::string& module_name) {
+    auto it = tracked_modules_.find(module_name);
+    if (it != tracked_modules_.end()) {
+        it->second.trusted = false;
+    }
+}
+
+RegistryDiagnostics ModuleRegistry::GetDiagnostics(size_t cache_count) const {
+    RegistryDiagnostics diag;
+    diag.active_cached_modules = cache_count;
+    
+    for (const auto& [name, mod] : tracked_modules_) {
+        if (mod.trusted) {
+            diag.trusted_modules++;
+            if (mod.guest_abi_version == Architect::Seraph::Abi::kVersion) {
+                diag.abi_compatible_modules++;
+                auto it = mod.capabilities.allowed_exports.find(name);
+                if (it != mod.capabilities.allowed_exports.end()) {
+                    diag.policy_exports_count += it->second.size();
+                }
+            }
+        }
+    }
+    
+    return diag;
+}
+
 } // namespace Architect::Seraph

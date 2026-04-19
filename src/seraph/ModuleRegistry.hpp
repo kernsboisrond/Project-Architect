@@ -28,6 +28,13 @@ enum class RegistryError {
     UnsupportedManifestVersion
 };
 
+struct RegistryDiagnostics {
+    size_t trusted_modules{0};
+    size_t active_cached_modules{0};
+    size_t abi_compatible_modules{0};
+    size_t policy_exports_count{0};
+};
+
 class ModuleRegistry {
 public:
     static constexpr std::string_view kSupportedManifestVersion = "1";
@@ -46,6 +53,14 @@ public:
 
     [[nodiscard]]
     std::vector<std::string> DescribePromptCapabilities() const;
+
+    [[nodiscard]]
+    std::expected<void, RegistryError> ReloadManifest(const std::filesystem::path& manifest_path);
+
+    void RevokeModule(const std::string& module_name);
+
+    [[nodiscard]]
+    RegistryDiagnostics GetDiagnostics(size_t cache_count) const;
 
     static std::string ComputeSha256(const std::vector<uint8_t>& binary_payload);
 

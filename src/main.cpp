@@ -1,6 +1,6 @@
 #include "core/CognitiveLoop.hpp"
 #include "seraph/ExecutorStub.hpp"
-#include "seraph/IAuditSink.hpp"
+#include "seraph/FileAuditSink.hpp"
 #include "seraph/WasmExecutor.hpp"
 #include "seraph/ModuleRegistry.hpp"
 #include "seraph/InvocationTypes.hpp"
@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <nlohmann/json.hpp>
 
 namespace {
 
@@ -50,10 +51,23 @@ bool ReadEnvBool(const char* name, bool fallback) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+    bool status_mode = ReadEnvBool("ARCHITECT_STATUS", false);
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--status") {
+            status_mode = true;
+        }
+    }
+
+    std::string audit_path = ReadEnvString("ARCHITECT_AUDIT_LOG", "architect_audit.jsonl");
+    Architect::Seraph::FileAuditSink audit{audit_path};
+    audit.LogSystemEvent("boot_start");
+
     std::cout << "Project ARCHITECT Local Kernel initiating...\n";
 
     std::unique_ptr<Architect::Warden::IBrainBackend> brain;
+    std::string brain_kind = "mock";
+    std::string last_error = "none";
 
 #if ARCHITECT_ENABLE_LLAMA
     Architect::Warden::LlamaBackendConfig config;
@@ -67,22 +81,15 @@ int main() {
 
     if (!config.model_path.empty()) {
         std::cout << "[Boot] LlamaCppBackend selected.\n";
-        std::cout << "[Boot] Resolved config:"
-                  << " model_path=" << config.model_path
-                  << ", n_ctx=" << config.n_ctx
-                  << ", n_predict=" << config.n_predict
-                  << ", n_batch=" << config.n_batch
-                  << ", n_ubatch=" << config.n_ubatch
-                  << ", n_gpu_layers=" << config.n_gpu_layers
-                  << ", verbose=" << (config.verbose ? "true" : "false")
-                  << "\n";
-
+        brain_kind = "llama_cpp";
         brain = std::make_unique<Architect::Warden::LlamaCppBackend>(config);
 
         if (auto* llama = dynamic_cast<Architect::Warden::LlamaCppBackend*>(brain.get());
             llama && !llama->IsReady()) {
             std::cout << "[Boot] LlamaCppBackend failed to initialize. Falling back to MockBrainBackend.\n";
+            last_error = "llama_cpp init failed";
             brain = std::make_unique<Architect::Warden::MockBrainBackend>();
+            brain_kind = "mock_fallback";
         }
     } else {
         brain = std::make_unique<Architect::Warden::MockBrainBackend>();
@@ -98,11 +105,22 @@ int main() {
     std::unique_ptr<Architect::Seraph::IExecutor> executor;
     Architect::Seraph::CapabilityManifest system_policy;
     std::vector<std::string> prompt_capabilities;
+    
+    std::string executor_type = "stub";
+    std::string active_manifest = "none";
+    size_t cached_modules = 0;
+    Architect::Seraph::RegistryDiagnostics diag{};
 
     const char* executor_env = std::getenv("ARCHITECT_EXECUTOR");
     if (executor_env && std::string(executor_env) == "wasm") {
+        executor_type = "wasm";
         std::string manifest_path = ReadEnvString("ARCHITECT_WASM_MANIFEST", "./tests/fixtures/manifest.json");
+        active_manifest = manifest_path;
+        
+        nlohmann::json exec_j = {{"executor", "wasm"}, {"manifest", manifest_path}};
+        audit.LogSystemEvent("boot_executor_selected", exec_j.dump());
         std::cout << "[Boot] Attempting to mount WasmExecutor using manifest " << manifest_path << "\n";
+        
         try {
             auto registry = std::make_shared<Architect::Seraph::ModuleRegistry>();
             auto load_res = registry->LoadManifest(manifest_path);
@@ -115,14 +133,31 @@ int main() {
                      case Architect::Seraph::RegistryError::UnsupportedManifestVersion: err_msg = "Unsupported manifest version"; break;
                      default: err_msg = "Unknown registry error";
                  }
+                 last_error = "Registry fail: " + err_msg;
+                 nlohmann::json err_j = {{"error", err_msg}};
+                 audit.LogSystemEvent("boot_registry_failed", err_j.dump());
                  std::cerr << "[Boot] FATAL: Failed to load Wasm Registry manifest (" << err_msg << ").\n";
                  return 1;
             }
-            executor = std::make_unique<Architect::Seraph::WasmExecutor>(registry);
+            
+            auto wasm_exec = std::make_unique<Architect::Seraph::WasmExecutor>(registry);
+            cached_modules = wasm_exec->InspectCacheCount();
+            executor = std::move(wasm_exec);
+            
             system_policy = registry->GenerateSystemPolicy();
             prompt_capabilities = registry->DescribePromptCapabilities();
+            diag = registry->GetDiagnostics(cached_modules);
+            
+            nlohmann::json reg_j = {
+                {"manifest", manifest_path},
+                {"trusted", diag.trusted_modules},
+                {"abi_compatible", diag.abi_compatible_modules},
+                {"policy_exports", diag.policy_exports_count}
+            };
+            audit.LogSystemEvent("boot_registry_loaded", reg_j.dump());
             std::cout << "[Boot] WasmExecutor online.\n";
         } catch (...) {
+            last_error = "WasmExecutor fatal exception";
             std::cerr << "[Boot] FATAL: WasmExecutor failed mapping unexpectedly.\n";
             return 1;
         }
@@ -131,9 +166,27 @@ int main() {
         executor = std::make_unique<Architect::Seraph::ExecutorStub>();
         system_policy.allowed_exports["echo"].push_back("print");
         prompt_capabilities = {"echo::print"};
+        nlohmann::json exec_j = {{"executor", "stub"}};
+        audit.LogSystemEvent("boot_executor_selected", exec_j.dump());
     }
 
-    Architect::Seraph::NoOpAuditSink audit{};
+    if (status_mode) {
+        nlohmann::json status_j = {
+            {"executor_type", executor_type},
+            {"manifest_path", active_manifest},
+            {"brain_backend", brain_kind},
+            {"trusted_modules", diag.trusted_modules},
+            {"cached_modules", cached_modules},
+            {"abi_compatible_modules", diag.abi_compatible_modules},
+            {"policy_exports_count", diag.policy_exports_count},
+            {"last_error", last_error}
+        };
+        audit.LogSystemEvent("status_snapshot", status_j.dump());
+        std::cout << "\n=== ARCHITECT STATUS ===\n";
+        std::cout << status_j.dump(2) << "\n";
+        std::cout << "========================\n";
+        return 0; // Inspect, report, exit.
+    }
 
     CognitiveLoop heartbeat{engine, *executor, audit, system_policy, prompt_capabilities};
     heartbeat.run();

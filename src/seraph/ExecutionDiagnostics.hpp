@@ -19,7 +19,9 @@ enum class ExecutionError {
     AllocatorError,
     FunctionCallError,
     ChecksumMismatch,
-    UntrustedModule
+    UntrustedModule,
+    PayloadTooLarge,
+    FuelExhausted
 };
 
 [[nodiscard]]
